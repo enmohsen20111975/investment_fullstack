@@ -1,0 +1,54 @@
+# EGX Investment API Docker Compose
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: egx_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: egx_user
+      POSTGRES_PASSWORD: egx_secure_password
+      POSTGRES_DB: egx_investment
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U egx_user -d egx_investment" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Application
+  api:
+    build: .
+    container_name: egx_api
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+psycopg://egx_user:egx_secure_password@db:5432/egx_investment
+      - DATABASE_URL_SYNC=postgresql+psycopg://egx_user:egx_secure_password@db:5432/egx_investment
+    env_file:
+      - .env
+    ports:
+      - "8010:8010"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+
+  # Redis (optional, for caching)
+  redis:
+    image: redis:7-alpine
+    container_name: egx_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
