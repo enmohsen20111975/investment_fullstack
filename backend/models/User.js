@@ -54,6 +54,23 @@ const User = sequelize.define('User', {
     last_login: {
         type: DataTypes.DATE,
         allowNull: true
+    },
+    // Subscription
+    subscription_plan: {
+        type: DataTypes.STRING(20),
+        defaultValue: 'free'   // free | pro | premium
+    },
+    subscription_status: {
+        type: DataTypes.STRING(20),
+        defaultValue: 'active' // active | expired | cancelled
+    },
+    subscription_expires_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    paymob_order_id: {
+        type: DataTypes.STRING(100),
+        allowNull: true
     }
 }, {
     tableName: 'users',

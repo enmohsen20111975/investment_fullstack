@@ -54,6 +54,18 @@ const settings = {
     // User API Key for authentication
     USER_API_KEY: process.env.USER_API_KEY || '2a04bb8e3a549176ed4b52f0ea632fc463de859581d8e2adbc1298cc1783548e',
 
+    // Paymob Payment Gateway
+    PAYMOB_API_KEY: process.env.PAYMOB_API_KEY || '',
+    PAYMOB_SECRET_KEY: process.env.PAYMOB_SECRET_KEY || '',
+    PAYMOB_PUBLIC_KEY: process.env.PAYMOB_PUBLIC_KEY || '',
+    PAYMOB_INTEGRATION_ID: process.env.PAYMOB_INTEGRATION_ID || '',
+    PAYMOB_IFRAME_ID: process.env.PAYMOB_IFRAME_ID || '',
+    PAYMOB_HMAC_SECRET: process.env.PAYMOB_HMAC_SECRET || '',
+    PAYMOB_PLAN_PRO_MONTHLY_PRICE: parseInt(process.env.PAYMOB_PLAN_PRO_MONTHLY_PRICE) || 9900,
+    PAYMOB_PLAN_PRO_YEARLY_PRICE: parseInt(process.env.PAYMOB_PLAN_PRO_YEARLY_PRICE) || 99000,
+    PAYMOB_PLAN_PREMIUM_MONTHLY_PRICE: parseInt(process.env.PAYMOB_PLAN_PREMIUM_MONTHLY_PRICE) || 19900,
+    PAYMOB_PLAN_PREMIUM_YEARLY_PRICE: parseInt(process.env.PAYMOB_PLAN_PREMIUM_YEARLY_PRICE) || 199000,
+
     // Google OAuth (Web)
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,

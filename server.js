@@ -20,6 +20,7 @@ const stocksRoutes = require('./backend/routes/stocks');
 const marketRoutes = require('./backend/routes/market');
 const portfolioRoutes = require('./backend/routes/portfolio');
 const userRoutes = require('./backend/routes/user');
+const paymentRoutes = require('./backend/routes/payment');
 
 // Create Express app
 const app = express();
@@ -59,6 +60,7 @@ app.use('/api/stocks', stocksRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/portfolio', portfolioRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -97,17 +99,56 @@ app.get('/api', (req, res) => {
     });
 });
 
-// Serve static frontend files
+// Serve static frontend files with proper MIME types and UTF-8 charset
 const FRONTEND_DIR = path.join(__dirname, 'frontend');
-app.use('/static', express.static(FRONTEND_DIR));
-app.use('/js', express.static(path.join(FRONTEND_DIR, 'js')));
-app.use('/css', express.static(path.join(FRONTEND_DIR, 'css')));
+
+const getMimeType = (filePath) => {
+    const ext = path.extname(filePath).toLowerCase();
+    const mimeTypes = {
+        '.js': 'application/javascript',
+        '.css': 'text/css',
+        '.html': 'text/html',
+        '.json': 'application/json',
+        '.svg': 'image/svg+xml',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.ico': 'image/x-icon'
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
+};
+
+const staticOptions = {
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, filePath) => {
+        const ext = path.extname(filePath).toLowerCase();
+        const mimeType = getMimeType(filePath);
+        
+        // Add charset=utf-8 for text-based files
+        if (['.js', '.html', '.css', '.json', '.xml', '.txt', '.svg'].includes(ext)) {
+            res.setHeader('Content-Type', mimeType + '; charset=utf-8');
+        } else {
+            res.setHeader('Content-Type', mimeType);
+        }
+        
+        // Prevent aggressive caching for JS modules
+        if (ext === '.js') {
+            res.setHeader('Cache-Control', 'no-cache, must-revalidate, max-age=0');
+        }
+    }
+};
+
+app.use('/static', express.static(FRONTEND_DIR, staticOptions));
+app.use('/js', express.static(path.join(FRONTEND_DIR, 'js'), staticOptions));
+app.use('/css', express.static(path.join(FRONTEND_DIR, 'css'), staticOptions));
 app.use('/images', express.static(path.join(FRONTEND_DIR, 'images')));
 
 // Root endpoint - serve frontend
 app.get('/', (req, res) => {
     const indexPath = path.join(FRONTEND_DIR, 'index.html');
     if (require('fs').existsSync(indexPath)) {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
         return res.sendFile(indexPath);
     }
     res.json({

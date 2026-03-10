@@ -265,7 +265,8 @@ function getComplianceText(status) {
         'halal': 'حلال',
         'haram': 'حرام',
         'doubtful': 'مشكوك',
+        'controversial': 'مشكوك',
         'unknown': 'غير معروف'
     };
-    return texts[status?.toLowerCase()] || status?.toUpperCase() || 'غير معروف';
+    return texts[status?.toLowerCase()] || 'غير معروف';
 }

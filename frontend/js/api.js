@@ -3,7 +3,18 @@
  * Handles all communication with the EGX Investment API backend
  */
 
-const API_BASE_URL = 'http://127.0.0.1:8100/api';
+// Dynamically determine API base URL based on environment
+const getApiBaseUrl = () => {
+    // If running on localhost (development) - use the same port as the frontend
+    // The backend serves both the frontend and API on the same port
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api`;
+    }
+    // Production: use the same domain with /api path
+    return `${window.location.protocol}//${window.location.host}/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class ApiService {
     constructor() {
@@ -657,7 +668,8 @@ class ApiService {
      * @returns {Promise<Object>} Health status
      */
     async checkHealth() {
-        const response = await fetch('http://localhost:8010/health');
+        const healthUrl = `${API_BASE_URL}/health`;
+        const response = await fetch(healthUrl);
         return response.json();
     }
 

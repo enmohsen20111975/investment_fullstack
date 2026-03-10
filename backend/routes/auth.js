@@ -6,6 +6,7 @@
 const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
+const { OAuth2Client } = require('google-auth-library');
 const { settings } = require('../config');
 const logger = require('../logger');
 const { User, APIKey } = require('../models');
@@ -201,14 +202,14 @@ router.post('/logout', authenticateApiKey, requireUser, async (req, res) => {
  */
 router.get('/google/config', (req, res) => {
     res.json({
-        enabled: !!(settings.GOOGLE_CLIENT_ID && settings.GOOGLE_CLIENT_SECRET),
+        enabled: !!settings.GOOGLE_CLIENT_ID,
         client_id: settings.GOOGLE_CLIENT_ID
     });
 });
 
 /**
  * @route POST /api/auth/google
- * @desc Login with Google
+ * @desc Login or register with Google ID token (Google One Tap / Sign-In)
  */
 router.post('/google', async (req, res) => {
     try {
@@ -218,15 +219,86 @@ router.post('/google', async (req, res) => {
             return res.status(400).json({ detail: 'ID token is required' });
         }
 
-        // Note: In production, verify the Google ID token using google-auth-library
-        // For now, return an error if Google OAuth is not configured
         if (!settings.GOOGLE_CLIENT_ID) {
-            return res.status(400).json({ detail: 'Google OAuth is not configured' });
+            return res.status(400).json({ detail: 'Google OAuth is not configured on this server' });
         }
 
-        // Placeholder for Google OAuth verification
-        // In production, you would verify the token and extract user info
-        res.status(501).json({ detail: 'Google OAuth not implemented' });
+        // Verify Google ID token
+        const client = new OAuth2Client(settings.GOOGLE_CLIENT_ID);
+        let payload;
+        try {
+            const ticket = await client.verifyIdToken({
+                idToken: id_token,
+                audience: settings.GOOGLE_CLIENT_ID
+            });
+            payload = ticket.getPayload();
+        } catch (verifyError) {
+            logger.warn('Google token verification failed:', verifyError.message);
+            return res.status(401).json({ detail: 'Invalid Google token' });
+        }
+
+        const { email, name, sub: googleId, picture } = payload;
+
+        if (!email) {
+            return res.status(400).json({ detail: 'Could not retrieve email from Google account' });
+        }
+
+        // Find existing user by email, or create a new one
+        let user = await User.findOne({ where: { email } });
+
+        if (!user) {
+            // Auto-generate a username from Google name or email
+            const baseUsername = (name || email.split('@')[0])
+                .replace(/\s+/g, '_')
+                .replace(/[^a-zA-Z0-9_]/g, '')
+                .slice(0, 30) || 'user';
+
+            // Ensure username is unique
+            let username = baseUsername;
+            let suffix = 1;
+            while (await User.findOne({ where: { username } })) {
+                username = `${baseUsername}${suffix++}`;
+            }
+
+            user = await User.create({
+                email,
+                username,
+                hashed_password: null,   // Google users have no password
+                is_active: true
+            });
+
+            logger.info(`New user registered via Google: ${email}`);
+        } else {
+            logger.info(`Existing user logged in via Google: ${email}`);
+        }
+
+        if (!user.is_active) {
+            return res.status(403).json({ detail: 'Account is disabled' });
+        }
+
+        // Generate API key for the session
+        const rawKey = generateApiKey();
+        const keyHash = hashApiKey(rawKey);
+
+        await APIKey.create({
+            user_id: user.id,
+            key_hash: keyHash,
+            name: 'Google Login'
+        });
+
+        await user.update({ last_login: new Date() });
+
+        res.json({
+            message: 'تم تسجيل الدخول عبر Google بنجاح',
+            user: {
+                id: user.id,
+                email: user.email,
+                username: user.username,
+                halal_only_preference: user.halal_only_preference,
+                default_risk_tolerance: user.default_risk_tolerance
+            },
+            api_key: rawKey
+        });
     } catch (error) {
         logger.error('Google login error:', error);
         res.status(500).json({ detail: 'Google login failed' });

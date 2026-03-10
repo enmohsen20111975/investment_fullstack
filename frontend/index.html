@@ -3,8 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>???? ??????? ??????? ???????</title>
+    <title>منصة استثمار EGX الذكية</title>
     <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
     <!-- Tailwind CSS (local build) -->
     <link rel="stylesheet" href="/static/css/tailwind.css">
@@ -233,6 +234,11 @@
                         data-page="alerts">
                         <i class="fas fa-bell w-5 text-center"></i>
                         <span class="text-sm font-medium">التنبيهات المجدولة</span>
+                    </div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200"
+                        data-page="subscription">
+                        <i class="fas fa-crown w-5 text-center text-yellow-500"></i>
+                        <span class="text-sm font-bold">الاشتراك</span>
                     </div>
                     <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
                         data-page="settings">
@@ -2335,6 +2341,62 @@
                     </div>
                 </div>
 
+                <!-- صفحة الاشتراك -->
+                <div class="page hidden" id="subscriptionPage">
+                    <div class="max-w-5xl mx-auto">
+
+                        <!-- Current plan banner -->
+                        <div id="currentPlanBanner" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl p-6 mb-8 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm opacity-80 mb-1">خطتك الحالية</p>
+                                <h2 class="text-2xl font-bold" id="currentPlanName">مجاني</h2>
+                                <p class="text-sm opacity-80 mt-1" id="currentPlanExpiry"></p>
+                            </div>
+                            <i class="fas fa-crown text-yellow-300 text-5xl"></i>
+                        </div>
+
+                        <!-- Payment result alert -->
+                        <div id="paymentResultAlert" class="hidden mb-6 p-4 rounded-xl text-sm font-medium"></div>
+
+                        <!-- Plans grid -->
+                        <h3 class="text-xl font-bold text-gray-900 mb-6 text-center">اختر الخطة المناسبة لك</h3>
+
+                        <!-- Billing toggle -->
+                        <div class="flex items-center justify-center gap-4 mb-8">
+                            <span class="text-sm font-medium text-gray-700">شهري</span>
+                            <button id="billingToggle" class="relative w-12 h-6 bg-gray-300 rounded-full transition-colors duration-200 focus:outline-none" aria-label="تبديل دورة الفوترة">
+                                <span id="billingToggleThumb" class="absolute top-1 right-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"></span>
+                            </button>
+                            <span class="text-sm font-medium text-gray-700">سنوي <span class="text-green-600 text-xs font-bold">(وفر 16%)</span></span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10" id="plansGrid">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <!-- Paymob iframe container -->
+                        <div id="paymobContainer" class="hidden mt-8">
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="font-semibold text-gray-900">إتمام الدفع عبر Paymob</h4>
+                                    <button id="cancelPayment" class="text-sm text-gray-500 hover:text-gray-700">
+                                        <i class="fas fa-times ml-1"></i>إلغاء
+                                    </button>
+                                </div>
+                                <iframe id="paymobIframe" src="" width="100%" height="600"
+                                    style="border:none;border-radius:8px;"
+                                    allow="payment"></iframe>
+                            </div>
+                        </div>
+
+                        <!-- Feature comparison note -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 text-center">
+                            <i class="fas fa-shield-alt ml-2"></i>
+                            جميع المدفوعات مؤمنة عبر بوابة Paymob المعتمدة في مصر — بطاقات فيزا، ماستركارد، فوري، وميزة
+                        </div>
+                    </div>
+                </div>
+
                 <!-- نافذة تفاصيل السهم -->
                 <div class="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 opacity-0 invisible transition-all duration-200 p-2 sm:p-4"
                     id="stockModal">
@@ -2357,7 +2419,7 @@
     </div>
 
     <!-- السكريبتات -->
-    <script type="module" src="/static/js/app.js?v=2026030303"></script>
+    <script type="module" src="/static/js/app.js?v=2026030702"></script>
     <script>
         // تبديل النافذة المنبثقة
         const modal = document.getElementById('stockModal');

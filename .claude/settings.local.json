@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"require\\(''google-auth-library''\\); console.log\\(''ok''\\)\")",
+      "Bash(node -e \"require\\(''./backend/routes/auth''\\); console.log\\(''auth.js OK''\\)\")"
+    ]
+  }
+}

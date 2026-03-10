@@ -1,6 +1,6 @@
 /**
- * ��حدة إدارة ا��&ستخد�&
- * تتعا�&� �&ع ا��&صاد�ة�R �ائ�&ة ا��&را�بة�R ا�أص����R ��ا�إعدادات
+ * وحدة إدارة المستخدم
+ * تتعامل مع المصادقة والقائمة المنسدلة والأصول وعرض الإعدادات
  */
 import apiService from '/static/js/api.js';
 
@@ -23,24 +23,24 @@ let userDropdown = null;
 let googleAuthConfig = null;
 let googleInitAttempts = 0;
 
-// ==================== ا�ت�!�`ئة ====================
+// ==================== التهيئة ====================
 export async function initializeUserModule() {
-    console.log('ت�!�`ئة ��حدة ا��&ستخد�&...');
+    console.log('تهيئة وحدة المستخدم...');
     
-    // إ� شاء ع� اصر ��اج�!ة ا��&ستخد�&
+    // إنشاء عناصر واجهة المستخدم
     createAuthModal();
     createUserDropdown();
     
-    // ا�تح�� �&�  حا�ة ا��&صاد�ة
+    // التحقق من حالة المصادقة
     await checkAuthStatus();
     
-    // إضافة �&ست�&ع�` ا�أحداث
+    // إضافة مستمع الأحداث
     setupEventListeners();
     
-    console.log('ت�& ت�!�`ئة ��حدة ا��&ستخد�& ب� جاح');
+    console.log('تم تهيئة وحدة المستخدم بنجاح');
 }
 
-// ==================== ا��&صاد�ة ====================
+// ==================== المصادقة ====================
 
 async function checkAuthStatus() {
     try {
@@ -56,7 +56,7 @@ async function checkAuthStatus() {
             updateUIForGuestUser();
         }
     } catch (error) {
-        console.error('خطأ ف�` ا�تح�� �&�  حا�ة ا��&صاد�ة:', error);
+        console.error('خطأ في التحقق من حالة المصادقة:', error);
         userState.isAuthenticated = false;
         userState.user = null;
         updateUIForGuestUser();
@@ -69,10 +69,10 @@ function createAuthModal() {
     modal.className = 'fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center';
     modal.innerHTML = `
         <div id="authModalPanel" class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full mx-4 overflow-hidden border border-gray-100 dark:border-gray-700" style="max-width: 420px; max-height: 90vh;">
-            <!-- رأس ا�� افذة -->
+            <!-- رأس النافذة -->
             <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-4">
                 <div class="flex justify-between items-center">
-                    <h3 id="authModalTitle" class="text-xl font-bold text-white">تسج�`� ا�دخ���</h3>
+                    <h3 id="authModalTitle" class="text-xl font-bold text-white">تسجيل الدخول</h3>
                     <button onclick="closeAuthModal()" class="text-white hover:text-gray-200">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -81,15 +81,15 @@ function createAuthModal() {
                 </div>
             </div>
             
-            <!-- �&حت���0 ا�� افذة -->
+            <!-- محتوى النافذة -->
             <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 72px);">
-                <!-- تبد�`� ا�تب���`بات -->
+                <!-- تبديل التبويبات -->
                 <div class="flex mb-6 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                     <button id="loginTab" onclick="switchAuthTab('login')" class="flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all bg-white dark:bg-gray-600 text-emerald-600 dark:text-emerald-400 shadow">
-                        تسج�`� ا�دخ���
+                        تسجيل الدخول
                     </button>
                     <button id="registerTab" onclick="switchAuthTab('register')" class="flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all text-gray-600 dark:text-gray-300">
-                        إ� شاء حساب
+                        إنشاء حساب
                     </button>
                 </div>
 
@@ -103,59 +103,59 @@ function createAuthModal() {
                         <div class="w-full border-t border-gray-200 dark:border-gray-700"></div>
                     </div>
                     <div class="relative flex justify-center text-xs">
-                        <span class="px-2 bg-white dark:bg-gray-800 text-gray-500">أ��</span>
+                        <span class="px-2 bg-white dark:bg-gray-800 text-gray-500">أو</span>
                     </div>
                 </div>
                 
-                <!-- � �&��ذج تسج�`� ا�دخ��� -->
+                <!-- نموذج تسجيل الدخول -->
                 <form id="loginForm" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ا�بر�`د ا�إ�ْتر��� �` أ�� اس�& ا��&ستخد�&</label>
-                        <input type="text" id="loginUsername" required class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="أدخ� ا�بر�`د أ�� اس�& ا��&ستخد�&">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">البريد الإلكتروني أو اسم المستخدم</label>
+                        <input type="text" id="loginUsername" required class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="أدخل البريد أو اسم المستخدم">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ْ��&ة ا��&ر��ر</label>
-                        <input type="password" id="loginPassword" required class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="أدخ� ْ��&ة ا��&ر��ر">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كلمة المرور</label>
+                        <input type="password" id="loginPassword" required class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="أدخل كلمة المرور">
                     </div>
                     <div id="loginError" class="hidden text-red-500 text-sm"></div>
                     <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors">
-                        تسج�`� ا�دخ���
+                        تسجيل الدخول
                     </button>
                 </form>
                 
-                <!-- � �&��ذج ا�تسج�`� -->
+                <!-- نموذج التسجيل -->
                 <form id="registerForm" class="space-y-4 hidden">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ا�بر�`د ا�إ�ْتر��� �`</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">البريد الإلكتروني</label>
                         <input type="email" id="registerEmail" required class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="example@email.com">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اس�& ا��&ستخد�&</label>
-                        <input type="text" id="registerUsername" required minlength="3" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="اختر اس�& �&ستخد�&">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">اسم المستخدم</label>
+                        <input type="text" id="registerUsername" required minlength="3" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="اختر اسم مستخدم">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ْ��&ة ا��&ر��ر</label>
-                        <input type="password" id="registerPassword" required minlength="8" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="8 أحرف ع��0 ا�أ��">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">كلمة المرور</label>
+                        <input type="password" id="registerPassword" required minlength="8" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="8 أحرف على الأقل">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تأْ�`د ْ��&ة ا��&ر��ر</label>
-                        <input type="password" id="registerPasswordConfirm" required class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="أعد ْتابة ْ��&ة ا��&ر��ر">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تأكيد كلمة المرور</label>
+                        <input type="password" id="registerPasswordConfirm" required class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="أعد كتابة كلمة المرور">
                     </div>
                     <div class="flex items-center">
                         <input type="checkbox" id="registerHalalOnly" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
-                        <label for="registerHalalOnly" class="mr-2 text-sm text-gray-700 dark:text-gray-300">تفض�`� ا�استث�&ار ا�ح�ا� ف�ط</label>
+                        <label for="registerHalalOnly" class="mr-2 text-sm text-gray-700 dark:text-gray-300">تفضيل الاستثمار الحلال فقط</label>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تح�&� ا��&خاطر</label>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تحمل المخاطر</label>
                         <select id="registerRiskTolerance" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
-                            <option value="low">�&� خفض</option>
-                            <option value="medium" selected>�&ت��سط</option>
-                            <option value="high">�&رتفع</option>
+                            <option value="low">منخفض</option>
+                            <option value="medium" selected>متوسط</option>
+                            <option value="high">مرتفع</option>
                         </select>
                     </div>
                     <div id="registerError" class="hidden text-red-500 text-sm"></div>
                     <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors">
-                        إ� شاء ا�حساب
+                        إنشاء الحساب
                     </button>
                 </form>
             </div>
@@ -164,7 +164,7 @@ function createAuthModal() {
     document.body.appendChild(modal);
     authModal = modal;
     
-    // إضافة �&ست�&ع�` ا�� �&اذج
+    // إضافة مستمعي الأحداث
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('registerForm').addEventListener('submit', handleRegister);
     initializeGoogleAuth();
@@ -181,7 +181,7 @@ async function initializeGoogleAuth() {
     try {
         googleAuthConfig = await apiService.getGoogleAuthConfig();
         if (!googleAuthConfig.enabled || !googleAuthConfig.client_id) {
-            errorEl.textContent = 'تسج�`� ا�دخ��� عبر Google غ�`ر �&تاح حا��`ا�9';
+            errorEl.textContent = 'تسجيل الدخول عبر Google غير متاح حالياً';
             errorEl.classList.remove('hidden');
             return;
         }
@@ -194,7 +194,7 @@ async function initializeGoogleAuth() {
                 }, 700);
                 return;
             }
-            errorEl.textContent = 'فش� تح�&�`� خد�&ة Google. تح�� �&�  ا�اتصا� با�إ� تر� ت';
+            errorEl.textContent = 'فشل تحميل خدمة Google. تحقق من الاتصال بالإنترنت';
             errorEl.classList.remove('hidden');
             return;
         }
@@ -216,8 +216,8 @@ async function initializeGoogleAuth() {
             shape: 'rectangular'
         });
     } catch (error) {
-        console.error('خطأ ف�` ت�!�`ئة Google Auth:', error);
-        errorEl.textContent = 'تعذر ت�!�`ئة تسج�`� ا�دخ��� عبر Google';
+        console.error('خطأ في تهيئة Google Auth:', error);
+        errorEl.textContent = 'تعذر تهيئة تسجيل الدخول عبر Google';
         errorEl.classList.remove('hidden');
     }
 }
@@ -228,7 +228,7 @@ async function handleGoogleCredentialResponse(googleResponse) {
         if (errorEl) errorEl.classList.add('hidden');
         const credential = googleResponse?.credential;
         if (!credential) {
-            throw new Error('��& �`ت�& است�ا�& ر�&ز Google');
+            throw new Error('لا يمكن استخراج رمز Google');
         }
 
         const response = await apiService.loginWithGoogle({
@@ -236,11 +236,11 @@ async function handleGoogleCredentialResponse(googleResponse) {
         });
 
         if (response?.api_key && response?.user) {
-            await completeAuthentication(response, 'ت�& تسج�`� ا�دخ��� عبر Google ب� جاح');
+            await completeAuthentication(response, 'تم تسجيل الدخول عبر Google بنجاح');
         }
     } catch (error) {
         if (errorEl) {
-            errorEl.textContent = error.message || 'فش� تسج�`� ا�دخ��� عبر Google';
+            errorEl.textContent = error.message || 'فشل تسجيل الدخول عبر Google';
             errorEl.classList.remove('hidden');
         }
     }
@@ -257,7 +257,7 @@ async function completeAuthentication(response, message) {
 }
 
 function createUserDropdown() {
-    // ا�بحث ع�  �&ْا�  إضافة ا��ائ�&ة ا��&� سد�ة
+    // البحث عن مكان إضافة القائمة المنسدلة
     const headerRight = document.querySelector('header .flex.items-center.gap-4');
     if (!headerRight) return;
     
@@ -268,26 +268,26 @@ function createUserDropdown() {
         <!-- زائر -->
         <div id="guestActions" class="flex items-center gap-2">
             <button onclick="openAuthModal('login')" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">
-                تسج�`� ا�دخ���
+                تسجيل الدخول
             </button>
             <button onclick="openAuthModal('register')" class="px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors">
-                إ� شاء حساب
+                إنشاء حساب
             </button>
         </div>
         
-        <!-- �&ستخد�& �&سج� -->
+        <!-- مستخدم مسجل -->
         <div id="userActions" class="hidden relative">
             <button onclick="toggleUserMenu()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                 <div class="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center">
                     <span id="userInitial" class="text-white font-medium text-sm">U</span>
                 </div>
-                <span id="userDisplayName" class="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">ا��&ستخد�&</span>
+                <span id="userDisplayName" class="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:block">المستخدم</span>
                 <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
             </button>
             
-            <!-- ا��ائ�&ة ا��&� سد�ة -->
+            <!-- القائمة المنسدلة -->
             <div id="userMenu" class="hidden absolute left-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
                 <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
                     <p id="menuUserEmail" class="text-sm text-gray-600 dark:text-gray-400 truncate">user@email.com</p>
@@ -297,25 +297,25 @@ function createUserDropdown() {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                     </svg>
-                    �ائ�&ة ا��&را�بة
+                    قائمة المراقبة
                 </a>
                 <a href="#" onclick="navigateToPage('portfolio'); return false;" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                     </svg>
-                    �&حفظت�`
+                    محفظتي
                 </a>
                 <a href="#" onclick="navigateToPage('income-expense'); return false;" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                     </svg>
-                    ا�دخ� ��ا��&صر��فات
+                    الدخل والمصروفات
                 </a>
                 <a href="#" onclick="navigateToPage('alerts'); return false;" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                     </svg>
-                    ا�ت� ب�`�!ات ا��&جد���ة
+                    التنبيهات المجدولة
                 </a>
                 <div class="border-t border-gray-200 dark:border-gray-700 my-2"></div>
                 <a href="#" onclick="navigateToPage('settings'); return false;" class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -323,13 +323,13 @@ function createUserDropdown() {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                     </svg>
-                    ا�إعدادات
+                    الإعدادات
                 </a>
                 <button onclick="handleLogout()" class="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                     </svg>
-                    تسج�`� ا�خر��ج
+                    تسجيل الخروج
                 </button>
             </div>
         </div>
@@ -364,10 +364,10 @@ function updateUIForGuestUser() {
     if (userActions) userActions.classList.add('hidden');
 }
 
-// ==================== �&عا�جات ا�أحداث ====================
+// ==================== معالجات الأحداث ====================
 
 function setupEventListeners() {
-    // إغ�ا� ا��ائ�&ة ع� د ا�� �ر خارج�!ا
+    // إغلاق القائمة عند الضغط خارجها
     document.addEventListener('click', (e) => {
         const userMenu = document.getElementById('userMenu');
         const userActionsContainer = document.getElementById('userActions');
@@ -391,10 +391,10 @@ async function handleLogin(e) {
         });
         
         if (response?.api_key && response?.user) {
-            await completeAuthentication(response, 'ت�& تسج�`� ا�دخ��� ب� جاح');
+            await completeAuthentication(response, 'تم تسجيل الدخول بنجاح');
         }
     } catch (error) {
-        errorEl.textContent = error.message || 'فش� تسج�`� ا�دخ���. تح�� �&�  ب�`ا� اتْ';
+        errorEl.textContent = error.message || 'فشل تسجيل الدخول. تحقق من البيانات';
         errorEl.classList.remove('hidden');
     }
 }
@@ -410,7 +410,7 @@ async function handleRegister(e) {
     const errorEl = document.getElementById('registerError');
     
     if (password !== passwordConfirm) {
-        errorEl.textContent = 'ْ��&تا ا��&ر��ر غ�`ر �&تطاب�ت�`� ';
+        errorEl.textContent = 'كلمات المرور غير متطابقة';
         errorEl.classList.remove('hidden');
         return;
     }
@@ -426,10 +426,10 @@ async function handleRegister(e) {
         });
         
         if (response?.api_key && response?.user) {
-            await completeAuthentication(response, 'ت�& إ� شاء ا�حساب ب� جاح');
+            await completeAuthentication(response, 'تم إنشاء الحساب بنجاح');
         }
     } catch (error) {
-        errorEl.textContent = error.message || 'فش� إ� شاء ا�حساب';
+        errorEl.textContent = error.message || 'فشل إنشاء الحساب';
         errorEl.classList.remove('hidden');
     }
 }
@@ -438,7 +438,7 @@ async function handleLogout() {
     try {
         await apiService.logout();
     } catch (error) {
-        console.error('خطأ ف�` تسج�`� ا�خر��ج:', error);
+        console.error('خطأ في تسجيل الخروج:', error);
     }
     
     apiService.resetApiKey();
@@ -452,9 +452,9 @@ async function handleLogout() {
     userState.settings = null;
     
     updateUIForGuestUser();
-    showNotification('ت�& تسج�`� ا�خر��ج', 'info');
+    showNotification('تم تسجيل الخروج', 'info');
     
-    // ا�ع��دة ��صفحة ا�رئ�`س�`ة
+    // العودة لصفحة الرئيسية
     if (typeof navigateToPage === 'function') {
         navigateToPage('dashboard');
     }
@@ -470,18 +470,18 @@ async function loadUserData() {
             loadFinancialSummary()
         ]);
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ب�`ا� ات ا��&ستخد�&:', error);
+        console.error('خطأ في تحميل بيانات المستخدم:', error);
     }
 }
 
-// ==================== �ائ�&ة ا��&را�بة ====================
+// ==================== قائمة المراقبة ====================
 
 async function loadWatchlist() {
     try {
         userState.watchlist = await apiService.getWatchlist();
         return userState.watchlist;
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� �ائ�&ة ا��&را�بة:', error);
+        console.error('خطأ في تحميل قائمة المراقبة:', error);
         return [];
     }
 }
@@ -492,11 +492,11 @@ async function addToWatchlist(stockId, options = {}) {
             stock_id: stockId,
             ...options
         });
-        showNotification('ت�&ت ا�إضافة إ��0 �ائ�&ة ا��&را�بة', 'success');
+        showNotification('تمت الإضافة إلى قائمة المراقبة', 'success');
         await loadWatchlist();
         return response;
     } catch (error) {
-        showNotification(error.message || 'فش� ا�إضافة إ��0 �ائ�&ة ا��&را�بة', 'error');
+        showNotification(error.message || 'فشل الإضافة إلى قائمة المراقبة', 'error');
         throw error;
     }
 }
@@ -504,22 +504,22 @@ async function addToWatchlist(stockId, options = {}) {
 async function removeFromWatchlist(itemId) {
     try {
         await apiService.removeFromWatchlist(itemId);
-        showNotification('ت�&ت ا�إزا�ة �&�  �ائ�&ة ا��&را�بة', 'success');
+        showNotification('تمت الإزالة من قائمة المراقبة', 'success');
         await loadWatchlist();
     } catch (error) {
-        showNotification(error.message || 'فش� ا�إزا�ة �&�  �ائ�&ة ا��&را�بة', 'error');
+        showNotification(error.message || 'فشل الإزالة من قائمة المراقبة', 'error');
         throw error;
     }
 }
 
-// ==================== ا�أص��� ====================
+// ==================== الأصول ====================
 
 async function loadAssets() {
     try {
         userState.assets = await apiService.getUserAssets();
         return userState.assets;
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا�أص���:', error);
+        console.error('خطأ في تحميل الأصول:', error);
         return [];
     }
 }
@@ -527,11 +527,11 @@ async function loadAssets() {
 async function createAsset(assetData) {
     try {
         const response = await apiService.createUserAsset(assetData);
-        showNotification('ت�&ت إضافة ا�أص� ب� جاح', 'success');
+        showNotification('تمت إضافة الأصل بنجاح', 'success');
         await loadAssets();
         return response;
     } catch (error) {
-        showNotification(error.message || 'فش� إضافة ا�أص�', 'error');
+        showNotification(error.message || 'فشل إضافة الأصل', 'error');
         throw error;
     }
 }
@@ -539,11 +539,11 @@ async function createAsset(assetData) {
 async function updateAsset(assetId, assetData) {
     try {
         const response = await apiService.updateUserAsset(assetId, assetData);
-        showNotification('ت�& تحد�`ث ا�أص� ب� جاح', 'success');
+        showNotification('تم تحديث الأصل بنجاح', 'success');
         await loadAssets();
         return response;
     } catch (error) {
-        showNotification(error.message || 'فش� تحد�`ث ا�أص�', 'error');
+        showNotification(error.message || 'فشل تحديث الأصل', 'error');
         throw error;
     }
 }
@@ -551,22 +551,22 @@ async function updateAsset(assetId, assetData) {
 async function deleteAsset(assetId) {
     try {
         await apiService.deleteUserAsset(assetId);
-        showNotification('ت�& حذف ا�أص� ب� جاح', 'success');
+        showNotification('تم حذف الأصل بنجاح', 'success');
         await loadAssets();
     } catch (error) {
-        showNotification(error.message || 'فش� حذف ا�أص�', 'error');
+        showNotification(error.message || 'فشل حذف الأصل', 'error');
         throw error;
     }
 }
 
-// ==================== ا�دخ� ��ا��&صر��فات ====================
+// ==================== الدخل والمصروفات ====================
 
 async function loadIncomeExpenses(params = {}) {
     try {
         userState.incomeExpenses = await apiService.getIncomeExpenses(params);
         return userState.incomeExpenses;
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا��&عا�&�ات:', error);
+        console.error('خطأ في تحميل المعاملات:', error);
         return [];
     }
 }
@@ -574,11 +574,11 @@ async function loadIncomeExpenses(params = {}) {
 async function createIncomeExpense(data) {
     try {
         const response = await apiService.createIncomeExpense(data);
-        showNotification('ت�&ت إضافة ا��&عا�&�ة ب� جاح', 'success');
+        showNotification('تمت إضافة المعاملة بنجاح', 'success');
         await loadIncomeExpenses();
         return response;
     } catch (error) {
-        showNotification(error.message || 'فش� إضافة ا��&عا�&�ة', 'error');
+        showNotification(error.message || 'فشل إضافة المعاملة', 'error');
         throw error;
     }
 }
@@ -586,34 +586,34 @@ async function createIncomeExpense(data) {
 async function deleteIncomeExpense(transactionId) {
     try {
         await apiService.deleteIncomeExpense(transactionId);
-        showNotification('ت�& حذف ا��&عا�&�ة ب� جاح', 'success');
+        showNotification('تم حذف المعاملة بنجاح', 'success');
         await loadIncomeExpenses();
     } catch (error) {
-        showNotification(error.message || 'فش� حذف ا��&عا�&�ة', 'error');
+        showNotification(error.message || 'فشل حذف المعاملة', 'error');
         throw error;
     }
 }
 
-// ==================== ا��&�خص ا��&ا��` ====================
+// ==================== الملخص المالي ====================
 
 async function loadFinancialSummary() {
     try {
         userState.financialSummary = await apiService.getFinancialSummary();
         return userState.financialSummary;
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا��&�خص ا��&ا��`:', error);
+        console.error('خطأ في تحميل الملخص المالي:', error);
         return null;
     }
 }
 
-// ==================== ا�ت� ب�`�!ات ا��&جد���ة ====================
+// ==================== التنبيهات المجدولة ====================
 
 async function loadScheduledAdvices() {
     try {
         userState.scheduledAdvices = await apiService.getScheduledAdvices();
         return userState.scheduledAdvices;
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا�ت� ب�`�!ات:', error);
+        console.error('خطأ في تحميل التنبيهات:', error);
         return [];
     }
 }
@@ -621,11 +621,11 @@ async function loadScheduledAdvices() {
 async function createScheduledAdvice(data) {
     try {
         const response = await apiService.createScheduledAdvice(data);
-        showNotification('ت�& إ� شاء ا�ت� ب�`�! ب� جاح', 'success');
+        showNotification('تم إنشاء التنبيه بنجاح', 'success');
         await loadScheduledAdvices();
         return response;
     } catch (error) {
-        showNotification(error.message || 'فش� إ� شاء ا�ت� ب�`�!', 'error');
+        showNotification(error.message || 'فشل إنشاء التنبيه', 'error');
         throw error;
     }
 }
@@ -633,22 +633,22 @@ async function createScheduledAdvice(data) {
 async function deleteScheduledAdvice(adviceId) {
     try {
         await apiService.deleteScheduledAdvice(adviceId);
-        showNotification('ت�& حذف ا�ت� ب�`�! ب� جاح', 'success');
+        showNotification('تم حذف التنبيه بنجاح', 'success');
         await loadScheduledAdvices();
     } catch (error) {
-        showNotification(error.message || 'فش� حذف ا�ت� ب�`�!', 'error');
+        showNotification(error.message || 'فشل حذف التنبيه', 'error');
         throw error;
     }
 }
 
-// ==================== إعدادات ا��&ستخد�& ====================
+// ==================== إعدادات المستخدم ====================
 
 async function loadUserSettings() {
     try {
         userState.settings = await apiService.getUserSettings();
         return userState.settings;
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا�إعدادات:', error);
+        console.error('خطأ في تحميل الإعدادات:', error);
         return null;
     }
 }
@@ -656,11 +656,11 @@ async function loadUserSettings() {
 async function updateUserSettings(data) {
     try {
         const response = await apiService.updateUserSettings(data);
-        showNotification('ت�& تحد�`ث ا�إعدادات ب� جاح', 'success');
+        showNotification('تم تحديث الإعدادات بنجاح', 'success');
         await loadUserSettings();
         return response;
     } catch (error) {
-        showNotification(error.message || 'فش� تحد�`ث ا�إعدادات', 'error');
+        showNotification(error.message || 'فشل تحديث الإعدادات', 'error');
         throw error;
     }
 }
@@ -689,7 +689,7 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// ==================== ��ظائف عا�&ة ====================
+// ==================== وظائف عامة ====================
 
 window.openAuthModal = function(tab = 'login') {
     if (authModal) {
@@ -725,7 +725,7 @@ window.switchAuthTab = function(tab) {
         registerForm.classList.add('hidden');
         if (googleAuthSection) googleAuthSection.classList.remove('hidden');
         if (authDivider) authDivider.classList.remove('hidden');
-        modalTitle.textContent = 'تسج�`� ا�دخ���';
+        modalTitle.textContent = 'تسجيل الدخول';
     } else {
         registerTab.classList.add('bg-white', 'dark:bg-gray-600', 'text-emerald-600', 'dark:text-emerald-400', 'shadow');
         registerTab.classList.remove('text-gray-600', 'dark:text-gray-300');
@@ -735,7 +735,7 @@ window.switchAuthTab = function(tab) {
         loginForm.classList.add('hidden');
         if (googleAuthSection) googleAuthSection.classList.add('hidden');
         if (authDivider) authDivider.classList.add('hidden');
-        modalTitle.textContent = 'إ� شاء حساب';
+            modalTitle.textContent = 'إنشاء حساب';
     }
 };
 
@@ -746,7 +746,7 @@ window.toggleUserMenu = function() {
     }
 };
 
-// تصد�`ر ا���ظائف ��ا�ب�`ا� ات
+// تصدير الوظائف والبيانات
 export {
     userState,
     checkAuthStatus,

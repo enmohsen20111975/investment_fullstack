@@ -1,9 +1,9 @@
 /**
- * �&� صة استث�&ار EGX - ا�تطب�`� ا�رئ�`س�`
- * ��اج�!ة أ�&ا�&�`ة �&ع�`ار�`ة باستخدا�& Tailwind CSS
+ * منصة استثمار EGX - التطبيق الرئيسي
+ * واجهة أمامية معيارية باستخدام Tailwind CSS
  */
 
-import apiService from '/static/js/api.js';
+import apiService from '/static/js/api.js?v=2026030700';
 import {
     createStatCard,
     createBadge,
@@ -45,7 +45,7 @@ import {
     deleteScheduledAdvice,
     updateUserSettings,
     showNotification
-} from '/static/js/modules/user.js';
+} from '/static/js/modules/user.js?v=2026030700';
 
 // Global chart instance for cleanup
 let currentChart = null;
@@ -202,21 +202,22 @@ function navigateTo(page) {
 
     // تحد�`ث ع� ��ا�  ا�صفحة
     const titles = {
-        dashboard: '???? ??????',
-        market: '???? ???? ??? ?????',
-        stocks: '???? ??????',
-        search: '????? ?? ??????',
-        halal: '?????? ??????',
-        recommendations: '?????? ???????',
-        learning: '???? ??????',
-        news: '????? ?????????',
-        watchlist: '????? ????????',
-        portfolio: '??????',
-        'income-expense': '????? ??????????',
-        alerts: '????????? ????????',
-        settings: '?????????',
+            dashboard: 'لوحة التحكم',
+            market: 'نظرة عامة على السوق',
+            stocks: 'جميع الأسهم',
+            search: 'البحث عن الأسهم',
+            halal: 'الأسهم الحلال',
+            recommendations: 'توصيات الاستثمار',
+            learning: 'مركز التعلم',
+            news: 'أخبار الاستثمار',
+            watchlist: 'قائمة المراقبة',
+            portfolio: 'محفظتي',
+            'income-expense': 'الدخل والمصروفات',
+            alerts: 'التنبيهات المجدولة',
+            settings: 'الإعدادات',
+            subscription: 'الاشتراك',
     };
-    elements.pageTitle.textContent = titles[page] || '???? ??????';
+        elements.pageTitle.textContent = titles[page] || 'لوحة التحكم';
 
     state.currentPage = page;
 
@@ -264,6 +265,9 @@ function navigateTo(page) {
         case 'settings':
             loadSettingsPage();
             break;
+        case 'subscription':
+            loadSubscriptionPage();
+            break;
     }
 }
 
@@ -281,11 +285,11 @@ function initializeEventListeners() {
     document.getElementById('saveSettingsApiKey')?.addEventListener('click', () => {
         const key = document.getElementById('currentApiKey')?.value?.trim();
         if (!key) {
-            showNotification('�`رج�0 إدخا� �&فتاح API صا�ح', 'danger');
+            showNotification('يرجى إدخال مفتاح API صالح', 'danger');
             return;
         }
         apiService.setApiKey(key);
-        showNotification('ت�& حفظ �&فتاح API', 'success');
+        showNotification('تم حفظ مفتاح API', 'success');
     });
 
     // ف�اتر صفحة ا�أس�!�&
@@ -339,8 +343,8 @@ function initializeGlobalLoadingIndicator() {
     overlay.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
             <div style="width:42px;height:42px;border:4px solid #e5e7eb;border-top-color:#2563eb;border-radius:9999px;animation:spin 0.9s linear infinite;"></div>
-            <div style="font-size:14px;font-weight:600;color:#1f2937;">جار�` تح�&�`� ا�ب�`ا� ات...</div>
-            <div style="font-size:12px;color:#6b7280;">ا�رجاء ا�ا� تظار</div>
+            <div style="font-size:14px;font-weight:600;color:#1f2937;">جاري تحميل البيانات...</div>
+            <div style="font-size:12px;color:#6b7280;">الرجاء الانتظار</div>
         </div>
     `;
 
@@ -398,7 +402,7 @@ function updateThemeToggleUI() {
     if (!elements.themeToggle) return;
     elements.themeToggle.innerHTML = isDark
         ? '<i class="fas fa-sun"></i><span>فاتح</span>'
-        : '<i class="fas fa-moon"></i><span>داْ� </span>';
+    : '<i class="fas fa-moon"></i><span>داكن</span>';
 }
 
 function openMobileSidebar() {
@@ -457,7 +461,7 @@ async function loadDashboard() {
                     </td>
                     <td class="px-4 py-3">${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}</td>
                 </tr>
-            `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">�ا ت��جد ب�`ا� ات �&تاحة</td></tr>';
+            `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد بيانات متاحة</td></tr>';
         }
 
         // تحد�`ث جد��� ا�خاسر�`� 
@@ -474,7 +478,7 @@ async function loadDashboard() {
                     </td>
                     <td class="px-4 py-3">${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}</td>
                 </tr>
-            `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">�ا ت��جد ب�`ا� ات �&تاحة</td></tr>';
+            `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد بيانات متاحة</td></tr>';
         }
 
         // استخراج ا��طاعات ��ف�اتر
@@ -486,8 +490,8 @@ async function loadDashboard() {
         content?.classList.remove('hidden');
 
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ���حة ا�تحْ�&:', error);
-        showNotification('فش� تح�&�`� ب�`ا� ات ���حة ا�تحْ�&', 'danger');
+        console.error('خطأ في تحميل لوحة التحكم:', error);
+        showNotification('فشل تحميل بيانات لوحة التحكم', 'danger');
         loading?.classList.add('hidden');
         content?.classList.remove('hidden');
     }
@@ -529,7 +533,7 @@ async function loadMarketOverview() {
                     <td class="px-4 py-3 text-gray-500">${formatNumber(stock.volume)}</td>
                     <td class="px-4 py-3">${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}</td>
                 </tr>
-            `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">�ا ت��جد ب�`ا� ات �&تاحة</td></tr>';
+            `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد بيانات متاحة</td></tr>';
         }
         
         // Show content, hide loading
@@ -537,8 +541,8 @@ async function loadMarketOverview() {
         content?.classList.remove('hidden');
 
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� � ظرة ا�س���:', error);
-        showNotification('فش� تح�&�`� ب�`ا� ات ا�س���', 'danger');
+        console.error('خطأ في تحميل نظرة السوق:', error);
+        showNotification('فشل تحميل بيانات السوق', 'danger');
         loading?.classList.add('hidden');
         content?.classList.remove('hidden');
     }
@@ -589,7 +593,7 @@ async function loadStocks(page = 1) {
                 <td class="px-4 py-3">${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}</td>
                 <td class="px-4 py-3">
                     <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                        عرض ا�تفاص�`�
+                        عرض التفاصيل
                     </button>
                 </td>
             </tr>
@@ -597,7 +601,7 @@ async function loadStocks(page = 1) {
 
         // تحد�`ث �&ع����&ات ا�صفحات
         document.getElementById('stocksInfo').textContent =
-            `عرض ${state.stocks.length} �&�  ${state.totalStocks} س�!�&`;
+            `عرض ${state.stocks.length} من ${state.totalStocks} سهم`;
 
         document.getElementById('prevPage').disabled = page <= 1;
         document.getElementById('nextPage').disabled = state.stocks.length < state.pageSize;
@@ -608,8 +612,8 @@ async function loadStocks(page = 1) {
         loading?.classList.add('hidden');
 
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا�أس�!�&:', error);
-        tableBody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-500">فش� تح�&�`� ا�أس�!�&: ${error.message}</td></tr>`;
+        console.error('خطأ في تحميل الأسهم:', error);
+        tableBody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-500">فشل تحميل الأسهم: ${error.message}</td></tr>`;
         pageLoading?.classList.add('hidden');
         pageContent?.classList.remove('hidden');
         loading?.classList.add('hidden');
@@ -620,7 +624,7 @@ async function loadStocks(page = 1) {
 async function performSearch() {
     const query = document.getElementById('searchQuery')?.value.trim();
     if (!query) {
-        showNotification('ا�رجاء إدخا� ْ��&ة ا�بحث', 'warning');
+        showNotification('الرجاء إدخال كلمة البحث', 'warning');
         return;
     }
 
@@ -645,17 +649,17 @@ async function performSearch() {
         if (response.results && response.results.length > 0) {
             resultsContainer.innerHTML = `
                 <div class="mb-4 text-sm text-gray-500">
-                    ت�& ا�عث��ر ع��0 ${response.total} � ت�`جة �٬ "${query}"
+                    تم العثور على ${response.total} نتيجة لـ "${query}"
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead>
                             <tr class="bg-gray-50 text-right">
-                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ا�ر�&ز</th>
-                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ا�اس�&</th>
-                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ا�سعر</th>
-                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ا��طاع</th>
-                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">ا�ا�&تثا�</th>
+                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">الرمز</th>
+                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
+                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
+                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">القطاع</th>
+                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">الامتثال</th>
                                 <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">إجراءات</th>
                             </tr>
                         </thead>
@@ -679,16 +683,16 @@ async function performSearch() {
         } else {
             resultsContainer.innerHTML = createEmptyState({
                 icon: 'fa-search',
-                title: '�ا ت��جد � تائج',
-                message: `��& �`ت�& ا�عث��ر ع��0 أس�!�& تطاب� "${query}"`
+                title: 'لا توجد نتائج',
+                message: `لم يتم العثور على أسهم تطابق "${query}"`
             });
         }
 
     } catch (error) {
-        console.error('خطأ ف�` ا�بحث:', error);
+        console.error('خطأ في البحث:', error);
         resultsContainer.innerHTML = createAlert({
             type: 'danger',
-            message: `فش� ا�بحث: ${error.message}`
+            message: `فشل البحث: ${error.message}`
         });
     } finally {
         loading?.classList.add('hidden');
@@ -716,11 +720,11 @@ async function loadHalalStocks() {
                     <td class="px-4 py-3 text-gray-900">${stock.name || '-'}</td>
                     <td class="px-4 py-3 font-medium">${stock.current_price ? formatCurrency(stock.current_price) : '-'}</td>
                     <td class="px-4 py-3 text-gray-500">${stock.sector || '-'}</td>
-                    <td class="px-4 py-3 text-sm text-gray-600">${stock.compliance_note || '�&ت��اف� �&ع ا�شر�`عة'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${stock.compliance_note || 'متوافق مع الشريعة'}</td>
                 </tr>
             `).join('');
         } else {
-            tableBody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">�ا ت��جد أس�!�& ح�ا�</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد أسهم حلال</td></tr>';
         }
         
         // Show content, hide loading
@@ -728,8 +732,8 @@ async function loadHalalStocks() {
         pageContent?.classList.remove('hidden');
 
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا�أس�!�& ا�ح�ا�:', error);
-        tableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">فش� ا�تح�&�`�: ${error.message}</td></tr>`;
+        console.error('خطأ في تحميل الأسهم الحلال:', error);
+        tableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">فشل التحميل: ${error.message}</td></tr>`;
         pageLoading?.classList.add('hidden');
         pageContent?.classList.remove('hidden');
     }
@@ -747,7 +751,7 @@ async function getRecommendations() {
     resultContainer.innerHTML = `
         <div class="flex flex-col items-center justify-center py-20">
             <div class="w-16 h-16 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-            <p class="text-gray-500 text-sm">جار�` حساب ا�ت��ص�`ات...</p>
+            <p class="text-gray-500 text-sm">جاري حساب التوصيات...</p>
         </div>
     `;
 
@@ -762,31 +766,31 @@ async function getRecommendations() {
 
         if (response.recommendations && response.recommendations.length > 0) {
             const riskText = {
-                'low': '�&� خفض',
-                'medium': '�&ت��سط',
-                'high': 'عا��`'
+                'low': 'منخفض',
+                'medium': 'متوسط',
+                'high': 'عالٍ'
             };
 
             resultContainer.innerHTML = `
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                        <h4 class="text-sm font-medium text-gray-500 mb-2">إج�&ا��` رأس ا��&ا�</h4>
+                        <h4 class="text-sm font-medium text-gray-500 mb-2">إجمالي رأس المال</h4>
                         <div class="text-2xl font-semibold text-gray-900">${formatCurrency(capital)}</div>
                     </div>
                     <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                        <h4 class="text-sm font-medium text-gray-500 mb-2">�&ست���0 ا��&خاطرة</h4>
+                        <h4 class="text-sm font-medium text-gray-500 mb-2">مستوى المخاطرة</h4>
                         <div class="text-2xl font-semibold text-gray-900">${riskText[risk] || risk}</div>
                     </div>
                     <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                        <h4 class="text-sm font-medium text-gray-500 mb-2">ا�عائد ا�س� ���` ا��&ت���ع</h4>
+                        <h4 class="text-sm font-medium text-gray-500 mb-2">العائد السنوي المتوقع</h4>
                         <div class="text-2xl font-semibold text-green-600">${response.expected_annual_return || 15}%</div>
                     </div>
                 </div>
                 
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200">
                     <div class="p-4 border-b border-gray-200">
-                        <h3 class="font-semibold text-gray-900">ا��&حفظة ا��&�ترحة</h3>
-                        <p class="text-sm text-gray-500">${response.recommendations.length} أس�!�& �&ختارة</p>
+                        <h3 class="font-semibold text-gray-900">المحفظة المقترحة</h3>
+                        <p class="text-sm text-gray-500">${response.recommendations.length} أسهم مختارة</p>
                     </div>
                     <div class="p-4 space-y-3">
                         ${response.recommendations.map(rec => createRecommendationCard(rec, capital)).join('')}
@@ -795,7 +799,7 @@ async function getRecommendations() {
                 
                 ${response.risk_assessment ? `
                     <div class="mt-6 bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                        <h3 class="font-semibold text-gray-900 mb-4">ت��`�`�& ا��&خاطر</h3>
+                        <h3 class="font-semibold text-gray-900 mb-4">تقييم المخاطر</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             ${Object.entries(response.risk_assessment).map(([key, value]) => `
                                 <div class="flex justify-between py-2 border-b border-gray-100">
@@ -810,34 +814,32 @@ async function getRecommendations() {
         } else {
             resultContainer.innerHTML = createAlert({
                 type: 'warning',
-                title: '�ا ت��جد ت��ص�`ات',
-                message: '��& �`ت�& ا�عث��ر ع��0 أس�!�& �&� اسبة تطاب� �&عا�`�`رْ. حا��� تعد�`� ا�ف�اتر.'
+                title: 'لا توجد توصيات',
+                message: 'لم يتم العثور على أسهم مناسبة تطابق معاييرك. حاول تعديل الفلاتر.'
             });
         }
 
     } catch (error) {
-        console.error('خطأ ف�` ا�حص��� ع��0 ا�ت��ص�`ات:', error);
+        console.error('خطأ في الحصول على التوصيات:', error);
         resultContainer.innerHTML = createAlert({
             type: 'danger',
-            message: `فش� ا�حص��� ع��0 ا�ت��ص�`ات: ${error.message}`
+            message: `فشل الحصول على التوصيات: ${error.message}`
         });
     }
 }
 
 // ==================== تفاص�`� ا�س�!�& ====================
 async function showStockDetail(ticker) {
-    elements.modalStockName.textContent = `جار�` تح�&�`� ${ticker}...`;
+    elements.modalStockName.textContent = `جاري تحميل ${ticker}...`;
     elements.modalBody.innerHTML = createLoadingSpinner();
     elements.stockModal?.classList.add('active');
 
-    // Destroy previous chart if exists
     if (currentChart) {
         destroyChart(currentChart);
         currentChart = null;
     }
 
     try {
-        // Fetch stock details, history, and recommendation in parallel
         const [stockResponse, historyResponse, recommendationResponse] = await Promise.all([
             apiService.getStock(ticker),
             apiService.getStockHistory(ticker, 60).catch(() => null),
@@ -853,423 +855,52 @@ async function showStockDetail(ticker) {
         const priceChange = stock.price_change || 0;
         const changeClass = priceChange >= 0 ? 'text-green-600' : 'text-red-600';
 
-        // Build history chart HTML with ApexCharts container
         let historyChartHtml = '';
         if (normalizedHistory.success && normalizedHistory.data.length > 0) {
-            const history = normalizedHistory.data;
             const summary = normalizedHistory.summary || {};
-
             historyChartHtml = `
                 <div class="mt-6 bg-white rounded-lg p-4 border border-gray-200">
                     <div class="flex items-center justify-between mb-4">
-                        <h4 class="font-semibold text-gray-900">
-                            <i class="fas fa-chart-candlestick ml-2 text-blue-500"></i>
-                            ا�رس�& ا�ب�`ا� �` ��أسعار
-                        </h4>
+                        <h4 class="font-semibold text-gray-900">الرسم البياني للأسعار</h4>
                         <div class="flex gap-2">
-                            <button onclick="switchChartType('candlestick')" id="btn-candlestick" 
-                                class="px-3 py-1 text-xs rounded-lg bg-blue-600 text-white">
-                                ش�&��ع
-                            </button>
-                            <button onclick="switchChartType('line')" id="btn-line"
-                                class="px-3 py-1 text-xs rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">
-                                خط�`
-                            </button>
+                            <button onclick="switchChartType('candlestick')" id="btn-candlestick" class="px-3 py-1 text-xs rounded-lg bg-blue-600 text-white">شموع</button>
+                            <button onclick="switchChartType('line')" id="btn-line" class="px-3 py-1 text-xs rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">خطي</button>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                        <div class="text-center bg-gray-50 rounded-lg p-2">
-                            <div class="text-xs text-gray-500">أع��0 سعر</div>
-                            <div class="font-semibold text-green-600">${summary.high_price?.toFixed(2) || '-'}</div>
-                        </div>
-                        <div class="text-center bg-gray-50 rounded-lg p-2">
-                            <div class="text-xs text-gray-500">أد� �0 سعر</div>
-                            <div class="font-semibold text-red-600">${summary.low_price?.toFixed(2) || '-'}</div>
-                        </div>
-                        <div class="text-center bg-gray-50 rounded-lg p-2">
-                            <div class="text-xs text-gray-500">�&ت��سط ا�سعر</div>
-                            <div class="font-semibold text-gray-700">${summary.avg_price?.toFixed(2) || '-'}</div>
-                        </div>
-                        <div class="text-center bg-gray-50 rounded-lg p-2">
-                            <div class="text-xs text-gray-500">ا�تغ�`ر ا�ْ��`</div>
-                            <div class="font-semibold ${summary.price_change_percent >= 0 ? 'text-green-600' : 'text-red-600'}">
-                                ${summary.price_change_percent ? summary.price_change_percent.toFixed(2) + '%' : '-'}
-                            </div>
-                        </div>
+                        <div class="text-center bg-gray-50 rounded-lg p-2"><div class="text-xs text-gray-500">أعلى</div><div class="font-semibold text-green-600">${summary.high_price?.toFixed(2) || '-'}</div></div>
+                        <div class="text-center bg-gray-50 rounded-lg p-2"><div class="text-xs text-gray-500">أدنى</div><div class="font-semibold text-red-600">${summary.low_price?.toFixed(2) || '-'}</div></div>
+                        <div class="text-center bg-gray-50 rounded-lg p-2"><div class="text-xs text-gray-500">متوسط</div><div class="font-semibold text-gray-700">${summary.avg_price?.toFixed(2) || '-'}</div></div>
+                        <div class="text-center bg-gray-50 rounded-lg p-2"><div class="text-xs text-gray-500">التغير</div><div class="font-semibold ${summary.price_change_percent >= 0 ? 'text-green-600' : 'text-red-600'}">${summary.price_change_percent ? summary.price_change_percent.toFixed(2) + '%' : '-'}</div></div>
                     </div>
                     <div id="stockChart" class="w-full"></div>
                 </div>
             `;
         }
 
-        // Build recommendation HTML with enriched data
         let recommendationHtml = '';
         if (normalizedRecommendation && normalizedRecommendation.success) {
             const rec = normalizedRecommendation.recommendation || {};
-            const scores = normalizedRecommendation.scores || rec.score_breakdown || {};
-            const trend = normalizedRecommendation.trend || {};
-            const dataQuality = normalizedRecommendation.data_quality || {};
-            
             const action = (rec.action || 'hold').toLowerCase();
             const actionAr = rec.action_ar || action;
-            
-            // Action styling
-            const recClass = (action === 'buy' || action === 'strong_buy') ? 'bg-green-100 text-green-800 border-green-300' :
-                (action === 'sell' || action === 'strong_sell') ? 'bg-red-100 text-red-800 border-red-300' :
-                    'bg-yellow-100 text-yellow-800 border-yellow-300';
-            const recIcon = (action === 'buy' || action === 'strong_buy') ? 'fa-arrow-up' :
-                (action === 'sell' || action === 'strong_sell') ? 'fa-arrow-down' :
-                    'fa-minus';
-            const recBgClass = (action === 'buy' || action === 'strong_buy') ? 'from-green-50 to-emerald-50 border-green-200' :
-                (action === 'sell' || action === 'strong_sell') ? 'from-red-50 to-rose-50 border-red-200' :
-                    'from-blue-50 to-indigo-50 border-blue-200';
-
             const confidenceValue = typeof rec.confidence === 'number'
                 ? rec.confidence
                 : (typeof rec.confidence_score === 'number' ? rec.confidence_score : 0);
-            const confidenceLabelMap = {
-                high: 'عا��`ة',
-                medium: '�&ت��سطة',
-                low: '�&� خفضة',
-                very_low: '�&� خفضة جدا�9'
-            };
-            const confidenceLabel = rec.confidence_label_ar || confidenceLabelMap[rec.confidence_label] || '';
 
-            // Target price handling
-            const targetPrice = (typeof recommendationResponse.target_price === 'number')
-                ? recommendationResponse.target_price
-                : (typeof rec.target_price === 'number' ? rec.target_price : null);
-            const upsidePercent = recommendationResponse.upside_percent || rec.upside_potential;
-            const downsidePercent = recommendationResponse.downside_percent;
-            const priceRange = recommendationResponse.price_range;
-
-            // Key strengths and risks - handle both object and string formats
-            const strengths = Array.isArray(recommendationResponse.key_strengths)
-                ? recommendationResponse.key_strengths.slice(0, 4).map(s => typeof s === 'object' ? s : { title: s, title_ar: s })
-                : (Array.isArray(rec.key_strengths) ? rec.key_strengths.slice(0, 4).map(s => typeof s === 'object' ? s : { title: s, title_ar: s }) : []);
-            const risks = Array.isArray(recommendationResponse.key_risks)
-                ? recommendationResponse.key_risks.slice(0, 4).map(r => typeof r === 'object' ? r : { title: r, title_ar: r })
-                : (Array.isArray(rec.key_risks) ? rec.key_risks.slice(0, 4).map(r => typeof r === 'object' ? r : { title: r, title_ar: r }) : []);
-
-            // Risk level with Arabic
-            const riskLevel = recommendationResponse.risk_level || rec.risk_level || 'medium';
-            const riskLevelAr = recommendationResponse.risk_level_ar || { low: '�&� خفض', medium: '�&ت��سط', high: '�&رتفع' }[riskLevel] || riskLevel;
-            const riskScore = recommendationResponse.risk_score || scores.risk_score || 50;
-            const riskClass = riskLevel === 'low' ? 'text-green-600' : riskLevel === 'high' ? 'text-red-600' : 'text-yellow-600';
-
-            // Trend signal with Arabic
-            const trendSignal = trend.signal || scores.trend_signal || 'neutral';
-            const trendStrength = trend.strength || 50;
-            const trendAr = { bullish: 'صاعد', bearish: '�!ابط', neutral: '�&حا�`د' }[trendSignal] || trendSignal;
-            const trendClass = trendSignal === 'bullish' ? 'text-green-600' : trendSignal === 'bearish' ? 'text-red-600' : 'text-gray-600';
-
-            // Score breakdown display
-            const compositeScore = scores.composite || scores.composite_score || 50;
-            const fundamentalScore = scores.fundamental || scores.fundamental_score || 50;
-            const technicalScore = scores.technical || scores.technical_score || 50;
-            const momentumScore = scores.momentum || 50;
-            const qualityScore = scores.quality || 50;
+            const recClass = (action === 'buy' || action === 'strong_buy')
+                ? 'bg-green-100 text-green-800 border-green-300'
+                : ((action === 'sell' || action === 'strong_sell')
+                    ? 'bg-red-100 text-red-800 border-red-300'
+                    : 'bg-yellow-100 text-yellow-800 border-yellow-300');
 
             recommendationHtml = `
-                <div class="mt-6 bg-gradient-to-r ${recBgClass} rounded-lg p-4 border">
-                    <h4 class="font-semibold text-gray-900 mb-3 flex items-center justify-between">
-                        <span>
-                            <i class="fas fa-brain ml-2 text-indigo-500"></i>
-                            ا�ت��ص�`ة ا�ذْ�`ة
-                        </span>
-                        ${recommendationResponse.processing_time_ms ? `
-                            <span class="text-xs text-gray-400 font-normal">
-                                <i class="fas fa-clock ml-1"></i>
-                                ${recommendationResponse.processing_time_ms}ms
-                            </span>
-                        ` : ''}
-                    </h4>
-                    
-                    <!-- Main Action Badge -->
-                    <div class="flex items-center gap-4 mb-4">
-                        <div class="px-4 py-2 rounded-lg border ${recClass} font-bold text-lg">
-                            <i class="fas ${recIcon} ml-2"></i>
-                            ${actionAr.toUpperCase()}
-                        </div>
-                        <div class="text-gray-600">
-                            <span class="text-sm">�&ست���0 ا�ث�ة:</span>
-                            <span class="font-semibold mr-1">${confidenceValue.toFixed(1)}%</span>
-                            ${confidenceLabel ? `<span class="text-xs text-gray-500">(${confidenceLabel})</span>` : ''}
-                        </div>
+                <div class="mt-6 bg-white rounded-lg p-4 border border-gray-200">
+                    <h4 class="font-semibold text-gray-900 mb-3">التوصية الذكية</h4>
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="px-3 py-1 rounded-lg border ${recClass} font-semibold">${actionAr.toUpperCase()}</div>
+                        <div class="text-sm text-gray-600">الثقة: <span class="font-semibold">${confidenceValue.toFixed(1)}%</span></div>
                     </div>
-                    
-                    <!-- Reason -->
-                    ${(rec.reason_ar || rec.reason) ? `
-                        <div class="bg-white rounded p-3 mb-3">
-                            <div class="text-sm text-gray-600 mb-1">ا�سبب:</div>
-                            <div class="text-gray-800">${rec.reason_ar || rec.reason}</div>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Price Targets -->
-                    ${targetPrice ? `
-                        <div class="grid grid-cols-3 gap-3 text-sm mb-3">
-                            <div class="bg-white rounded p-2">
-                                <span class="text-gray-500 block text-xs">ا�سعر ا��&ست�!دف</span>
-                                <span class="font-semibold text-lg">${targetPrice.toFixed(2)}</span>
-                            </div>
-                            <div class="bg-white rounded p-2">
-                                <span class="text-gray-500 block text-xs">� سبة ا�صع��د</span>
-                                <span class="font-semibold ${upsidePercent >= 0 ? 'text-green-600' : 'text-red-600'}">
-                                    ${upsidePercent >= 0 ? '+' : ''}${upsidePercent?.toFixed(1)}%
-                                </span>
-                            </div>
-                            <div class="bg-white rounded p-2">
-                                <span class="text-gray-500 block text-xs">� سبة ا��!ب��ط</span>
-                                <span class="font-semibold text-red-600">
-                                    ${downsidePercent?.toFixed(1)}%
-                                </span>
-                            </div>
-                        </div>
-                        ${priceRange ? `
-                            <div class="text-xs text-gray-500 mb-3">
-                                <i class="fas fa-info-circle ml-1"></i>
-                                ا�� طا� ا�سعر�`: ${priceRange.low?.toFixed(2)} - ${priceRange.high?.toFixed(2)}
-                            </div>
-                        ` : ''}
-                    ` : ''}
-                    
-                    <!-- Risk & Trend -->
-                    <div class="grid grid-cols-2 gap-3 text-sm mb-3">
-                        <div class="bg-white rounded p-2">
-                            <span class="text-gray-500 block text-xs">�&ست���0 ا��&خاطر</span>
-                            <span class="font-semibold ${riskClass}">${riskLevelAr}</span>
-                            <span class="text-xs text-gray-400 mr-1">(${riskScore.toFixed(0)})</span>
-                        </div>
-                        <div class="bg-white rounded p-2">
-                            <span class="text-gray-500 block text-xs">إشارة ا�اتجا�!</span>
-                            <span class="font-semibold ${trendClass}">${trendAr}</span>
-                            <span class="text-xs text-gray-400 mr-1">(${trendStrength.toFixed(0)}%)</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Score Breakdown -->
-                    <div class="bg-white rounded p-3 mb-3">
-                        <div class="text-sm text-gray-600 mb-2">تفاص�`� ا�� تائج:</div>
-                        <div class="grid grid-cols-5 gap-2 text-center text-xs">
-                            <div>
-                                <div class="font-bold text-lg ${compositeScore >= 60 ? 'text-green-600' : compositeScore <= 40 ? 'text-red-600' : 'text-gray-600'}">${compositeScore.toFixed(0)}</div>
-                                <div class="text-gray-500">ا�إج�&ا��`</div>
-                            </div>
-                            <div>
-                                <div class="font-bold ${fundamentalScore >= 60 ? 'text-green-600' : fundamentalScore <= 40 ? 'text-red-600' : 'text-gray-600'}">${fundamentalScore.toFixed(0)}</div>
-                                <div class="text-gray-500">ا�أساس�`ات</div>
-                            </div>
-                            <div>
-                                <div class="font-bold ${technicalScore >= 60 ? 'text-green-600' : technicalScore <= 40 ? 'text-red-600' : 'text-gray-600'}">${technicalScore.toFixed(0)}</div>
-                                <div class="text-gray-500">ا�ت�� �`ة</div>
-                            </div>
-                            <div>
-                                <div class="font-bold ${momentumScore >= 60 ? 'text-green-600' : momentumScore <= 40 ? 'text-red-600' : 'text-gray-600'}">${momentumScore.toFixed(0)}</div>
-                                <div class="text-gray-500">ا�زخ�&</div>
-                            </div>
-                            <div>
-                                <div class="font-bold ${qualityScore >= 60 ? 'text-green-600' : qualityScore <= 40 ? 'text-red-600' : 'text-gray-600'}">${qualityScore.toFixed(0)}</div>
-                                <div class="text-gray-500">ا�ج��دة</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Key Strengths -->
-                    ${strengths.length ? `
-                        <div class="mb-3">
-                            <div class="text-green-700 font-medium mb-2 flex items-center">
-                                <i class="fas fa-check-circle ml-2"></i>
-                                � �اط ا����ة
-                            </div>
-                            <div class="space-y-1">
-                                ${strengths.map(item => `
-                                    <div class="flex items-start text-sm bg-green-50 rounded p-2">
-                                        <i class="fas fa-plus-circle text-green-500 ml-2 mt-0.5"></i>
-                                        <div>
-                                            <span class="font-medium text-gray-800">${item.title_ar || item.title || item}</span>
-                                            ${item.description_ar || item.description ? `<span class="text-gray-500 text-xs block">${item.description_ar || item.description}</span>` : ''}
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Key Risks -->
-                    ${risks.length ? `
-                        <div class="mb-3">
-                            <div class="text-red-700 font-medium mb-2 flex items-center">
-                                <i class="fas fa-exclamation-triangle ml-2"></i>
-                                ع��ا�&� ا��&خاطرة
-                            </div>
-                            <div class="space-y-1">
-                                ${risks.map(item => `
-                                    <div class="flex items-start text-sm bg-red-50 rounded p-2">
-                                        <i class="fas fa-minus-circle text-red-500 ml-2 mt-0.5"></i>
-                                        <div>
-                                            <span class="font-medium text-gray-800">${item.title_ar || item.title || item}</span>
-                                            ${item.description_ar || item.description ? `<span class="text-gray-500 text-xs block">${item.description_ar || item.description}</span>` : ''}
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Data Quality -->
-                    ${dataQuality.score ? `
-                        <div class="text-xs text-gray-400 pt-2 border-t border-gray-200">
-                            <i class="fas fa-database ml-1"></i>
-                            ج��دة ا�ب�`ا� ات: ${dataQuality.score.toFixed(0)}%
-                            ${dataQuality.sources_available ? `| ${dataQuality.sources_available} �&صادر` : ''}
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Educational Section -->
-                    ${recommendationResponse.education ? `
-                        <div class="mt-4 pt-3 border-t border-gray-200">
-                            <button onclick="toggleEducationSection()" class="flex items-center justify-between w-full text-sm font-medium text-indigo-600 hover:text-indigo-800">
-                                <span>
-                                    <i class="fas fa-graduation-cap ml-2"></i>
-                                    تع���& ا��&ز�`د ع�  �!ذا ا�تح��`�
-                                </span>
-                                <i class="fas fa-chevron-down" id="educationToggleIcon"></i>
-                            </button>
-                            <div id="educationSection" class="hidden mt-3 space-y-4">
-                                <!-- Recommendation Guide -->
-                                ${recommendationResponse.education.recommendation_guide ? `
-                                    <div class="bg-indigo-50 rounded-lg p-3">
-                                        <h5 class="font-semibold text-indigo-800 mb-2">
-                                            ${recommendationResponse.education.recommendation_guide.title}
-                                        </h5>
-                                        <p class="text-sm text-gray-700 mb-2">${recommendationResponse.education.recommendation_guide.description}</p>
-                                        <div class="text-sm">
-                                            <div class="font-medium text-gray-700 mb-1">ا�خط��ات ا��&�ترحة:</div>
-                                            <ul class="list-disc pr-5 text-gray-600 space-y-1">
-                                                ${recommendationResponse.education.recommendation_guide.actions.map(a => `<li>${a}</li>`).join('')}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                ` : ''}
-                                
-                                <!-- Financial Terms -->
-                                ${recommendationResponse.education.terms && recommendationResponse.education.terms.length > 0 ? `
-                                    <div class="bg-gray-50 rounded-lg p-3">
-                                        <h5 class="font-semibold text-gray-800 mb-2">
-                                            <i class="fas fa-book ml-2 text-gray-500"></i>
-                                            شرح ا��&صط�حات ا��&ا��`ة
-                                        </h5>
-                                        <div class="space-y-2">
-                                            ${recommendationResponse.education.terms.map(term => `
-                                                <div class="bg-white rounded p-2 text-sm">
-                                                    <div class="flex justify-between items-start">
-                                                        <div class="font-medium text-gray-800">${term.term}</div>
-                                                        <div class="text-xs text-gray-400">${term.term_en}</div>
-                                                    </div>
-                                                    <div class="text-gray-600 mt-1">${term.explanation}</div>
-                                                    <div class="flex justify-between items-center mt-1">
-                                                        <span class="text-xs px-2 py-0.5 rounded ${
-                                                            term.interpretation.includes('�&�&تاز') || term.interpretation.includes('جذاب') || term.interpretation.includes('�&� خفض ا��&خاطر') || term.interpretation.includes('�&�ب���') || term.interpretation.includes('فرصة')
-                                                                ? 'bg-green-100 text-green-700'
-                                                                : term.interpretation.includes('�&رتفع') || term.interpretation.includes('ضع�`ف') || term.interpretation.includes('حذر') || term.interpretation.includes('�&رتفع ا��&خاطر')
-                                                                    ? 'bg-red-100 text-red-700'
-                                                                    : 'bg-yellow-100 text-yellow-700'
-                                                        }">${term.interpretation}</span>
-                                                        <span class="font-semibold">${term.value}</span>
-                                                    </div>
-                                                    <div class="text-xs text-gray-500 mt-1 italic">
-                                                        <i class="fas fa-lightbulb ml-1 text-yellow-500"></i>
-                                                        ${term.tip}
-                                                    </div>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                ` : ''}
-                                
-                                <!-- Scores Explanation -->
-                                ${recommendationResponse.education.scores_explanation ? `
-                                    <div class="bg-blue-50 rounded-lg p-3">
-                                        <h5 class="font-semibold text-blue-800 mb-2">
-                                            <i class="fas fa-chart-bar ml-2 text-blue-500"></i>
-                                            ف�!�& ا�� تائج
-                                        </h5>
-                                        <div class="space-y-2 text-sm">
-                                            <div class="bg-white rounded p-2">
-                                                <div class="font-medium text-gray-800">${recommendationResponse.education.scores_explanation.composite.title}</div>
-                                                <div class="text-gray-600">${recommendationResponse.education.scores_explanation.composite.description}</div>
-                                            </div>
-                                            <div class="bg-white rounded p-2">
-                                                <div class="font-medium text-gray-800">${recommendationResponse.education.scores_explanation.fundamental.title}</div>
-                                                <div class="text-gray-600">${recommendationResponse.education.scores_explanation.fundamental.description}</div>
-                                            </div>
-                                            <div class="bg-white rounded p-2">
-                                                <div class="font-medium text-gray-800">${recommendationResponse.education.scores_explanation.technical.title}</div>
-                                                <div class="text-gray-600">${recommendationResponse.education.scores_explanation.technical.description}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ` : ''}
-                                
-                                <!-- Risk Education -->
-                                ${recommendationResponse.education.risk_education ? `
-                                    <div class="bg-orange-50 rounded-lg p-3">
-                                        <h5 class="font-semibold text-orange-800 mb-2">
-                                            <i class="fas fa-shield-alt ml-2 text-orange-500"></i>
-                                            ${recommendationResponse.education.risk_education.title}
-                                        </h5>
-                                        <p class="text-sm text-gray-700 mb-2">${recommendationResponse.education.risk_education.explanation}</p>
-                                        ${recommendationResponse.education.risk_education.your_risk_level ? `
-                                            <div class="bg-white rounded p-2 mb-2">
-                                                <div class="font-medium text-gray-800">�&ست���0 �&خاطر �!ذا ا�س�!�&:</div>
-                                                <div class="text-gray-600">${recommendationResponse.education.risk_education.your_risk_level.what_it_means}</div>
-                                            </div>
-                                        ` : ''}
-                                        <div class="text-sm">
-                                            <div class="font-medium text-gray-700 mb-1">� صائح إدارة ا��&خاطر:</div>
-                                            <ul class="list-disc pr-5 text-gray-600 space-y-1">
-                                                ${recommendationResponse.education.risk_education.risk_management_tips.slice(0, 3).map(tip => `<li>${tip}</li>`).join('')}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                ` : ''}
-                                
-                                <!-- Next Steps -->
-                                ${recommendationResponse.education.next_steps && recommendationResponse.education.next_steps.length > 0 ? `
-                                    <div class="bg-green-50 rounded-lg p-3">
-                                        <h5 class="font-semibold text-green-800 mb-2">
-                                            <i class="fas fa-route ml-2 text-green-500"></i>
-                                            ا�خط��ات ا�تا��`ة
-                                        </h5>
-                                        <div class="space-y-2">
-                                            ${recommendationResponse.education.next_steps.map(step => `
-                                                <div class="flex items-start bg-white rounded p-2 text-sm">
-                                                    <div class="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold ml-2 flex-shrink-0">
-                                                        ${step.step}
-                                                    </div>
-                                                    <div>
-                                                        <div class="font-medium text-gray-800">${step.title}</div>
-                                                        <div class="text-gray-600">${step.description}</div>
-                                                        <div class="text-xs text-green-600 mt-1">
-                                                            <i class="fas fa-arrow-left ml-1"></i>
-                                                            ${step.action}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Disclaimer -->
-                    <div class="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-200">
-                        <i class="fas fa-info-circle ml-1"></i>
-                        �!ذا ا�تح��`� ��أغراض ا��&ع����&ات�`ة ف�ط ���ا �`ُعتبر � ص�`حة �&ا��`ة.
-                    </div>
+                    ${(rec.reason_ar || rec.reason) ? `<p class="text-sm text-gray-700">${rec.reason_ar || rec.reason}</p>` : ''}
                 </div>
             `;
         }
@@ -1282,111 +913,30 @@ async function showStockDetail(ticker) {
                 </div>
                 <div class="text-left">
                     <div class="text-3xl font-bold text-gray-900">${stock.current_price ? formatCurrency(stock.current_price) : '-'}</div>
-                    <div class="${changeClass} text-sm mt-1">
-                        <i class="fas ${priceChange >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'} text-xs ml-1"></i>
-                        ${Math.abs(priceChange).toFixed(2)} ج� �`�!
-                    </div>
+                    <div class="${changeClass} text-sm mt-1">${Math.abs(priceChange).toFixed(2)}</div>
                 </div>
             </div>
-            
+
             <div class="mb-6">
                 ${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}
                 ${stock.compliance_note ? `<span class="mr-2 text-sm text-gray-500">${stock.compliance_note}</span>` : ''}
             </div>
-            
+
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div class="text-xs text-gray-500 mb-1">إغ�ا� ساب�</div>
-                    <div class="font-semibold">${stock.previous_close ? formatCurrency(stock.previous_close) : '-'}</div>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div class="text-xs text-gray-500 mb-1">ا�افتتاح</div>
-                    <div class="font-semibold">${stock.open_price ? formatCurrency(stock.open_price) : '-'}</div>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div class="text-xs text-gray-500 mb-1">أع��0</div>
-                    <div class="font-semibold">${stock.high_price ? formatCurrency(stock.high_price) : '-'}</div>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <div class="text-xs text-gray-500 mb-1">أد� �0</div>
-                    <div class="font-semibold">${stock.low_price ? formatCurrency(stock.low_price) : '-'}</div>
-                </div>
+                <div class="bg-gray-50 rounded-lg p-4"><div class="text-xs text-gray-500 mb-1">الإغلاق السابق</div><div class="font-semibold">${stock.previous_close ? formatCurrency(stock.previous_close) : '-'}</div></div>
+                <div class="bg-gray-50 rounded-lg p-4"><div class="text-xs text-gray-500 mb-1">الافتتاح</div><div class="font-semibold">${stock.open_price ? formatCurrency(stock.open_price) : '-'}</div></div>
+                <div class="bg-gray-50 rounded-lg p-4"><div class="text-xs text-gray-500 mb-1">أعلى</div><div class="font-semibold">${stock.high_price ? formatCurrency(stock.high_price) : '-'}</div></div>
+                <div class="bg-gray-50 rounded-lg p-4"><div class="text-xs text-gray-500 mb-1">أدنى</div><div class="font-semibold">${stock.low_price ? formatCurrency(stock.low_price) : '-'}</div></div>
             </div>
-            
-            <h4 class="font-semibold text-gray-900 mb-3">ا��&�ا�`�`س ا�رئ�`س�`ة</h4>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">ا�حج�&</span>
-                    <span class="font-medium">${formatNumber(stock.volume)}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">ا���`�&ة ا�س����`ة</span>
-                    <span class="font-medium">${stock.market_cap ? formatNumber(stock.market_cap) : '-'}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">�&ضاعف ا�ربح�`ة</span>
-                    <span class="font-medium">${stock.pe_ratio?.toFixed(2) || '-'}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">�&ضاعف ا���`�&ة ا�دفتر�`ة</span>
-                    <span class="font-medium">${stock.pb_ratio?.toFixed(2) || '-'}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">ربح�`ة ا�س�!�&</span>
-                    <span class="font-medium">${stock.eps?.toFixed(2) || '-'}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">ا�عائد ع��0 ح���� ا��&سا�!�&�`� </span>
-                    <span class="font-medium">${stock.roe ? `${stock.roe.toFixed(2)}%` : '-'}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">عائد ا�ت��ز�`عات</span>
-                    <span class="font-medium">${stock.dividend_yield ? `${stock.dividend_yield.toFixed(2)}%` : '-'}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">� سبة ا�د�`�  ��ح����</span>
-                    <span class="font-medium">${stock.debt_to_equity?.toFixed(2) || '-'}</span>
-                </div>
-            </div>
-            
-            <h4 class="font-semibold text-gray-900 mt-6 mb-3">ا��&ؤشرات ا�ف� �`ة</h4>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">ا��&ت��سط ا��&تحرْ 50</span>
-                    <span class="font-medium">${stock.ma_50?.toFixed(2) || '-'}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">ا��&ت��سط ا��&تحرْ 200</span>
-                    <span class="font-medium">${stock.ma_200?.toFixed(2) || '-'}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">�&ؤشر ا����ة ا�� سب�`ة</span>
-                    <span class="font-medium">${stock.rsi?.toFixed(2) || '-'}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">�&ست���0 ا�دع�&</span>
-                    <span class="font-medium">${stock.support_level?.toFixed(2) || '-'}</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">�&ست���0 ا��&�ا���&ة</span>
-                    <span class="font-medium">${stock.resistance_level?.toFixed(2) || '-'}</span>
-                </div>
-            </div>
-            
+
             ${historyChartHtml}
             ${recommendationHtml}
-            
-            <div class="mt-6 pt-4 border-t border-gray-200 text-sm text-gray-500">
-                آخر تحد�`ث: ${formatDate(stock.last_update)}
-            </div>
+
+            <div class="mt-6 pt-4 border-t border-gray-200 text-sm text-gray-500">آخر تحديث: ${formatDate(stock.last_update)}</div>
         `;
 
-        // Initialize chart after DOM is ready
         if (normalizedHistory.success && normalizedHistory.data.length > 0) {
-            // Store history data globally for chart type switching
             window.currentHistoryData = normalizedHistory.data;
-
-            // Use setTimeout to ensure DOM is ready
             setTimeout(() => {
                 currentChart = createCandlestickChart('stockChart', normalizedHistory.data, {
                     title: ''
@@ -1395,10 +945,10 @@ async function showStockDetail(ticker) {
         }
 
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� تفاص�`� ا�س�!�&:', error);
+        console.error('خطأ في تحميل تفاصيل السهم:', error);
         elements.modalBody.innerHTML = createAlert({
             type: 'danger',
-            message: `فش� تح�&�`� تفاص�`� ا�س�!�&: ${error.message}`
+            message: `فشل تحميل تفاصيل السهم: ${error.message}`
         });
     }
 }
@@ -1454,18 +1004,18 @@ async function updateMarketStatus() {
             statusElement.classList.add('open');
             statusElement.querySelector('.status-dot').classList.remove('bg-red-500');
             statusElement.querySelector('.status-dot').classList.add('bg-green-500');
-            statusElement.querySelector('.status-text').textContent = 'ا�س��� �&فت��ح';
+            statusElement.querySelector('.status-text').textContent = 'السوق مفتوح';
         } else {
             statusElement.classList.remove('open');
             statusElement.querySelector('.status-dot').classList.remove('bg-green-500');
             statusElement.querySelector('.status-dot').classList.add('bg-red-500');
-            statusElement.querySelector('.status-text').textContent = 'ا�س��� �&غ��';
+            statusElement.querySelector('.status-text').textContent = 'السوق مغلق';
         }
 
         state.marketStatus = status;
 
     } catch (error) {
-        console.error('خطأ ف�` تحد�`ث حا�ة ا�س���:', error);
+        console.error('خطأ في تحديث حالة السوق:', error);
     }
 }
 
@@ -1477,7 +1027,7 @@ function updateSectorFilters() {
         const select = document.getElementById(id);
         if (select) {
             const currentValue = select.value;
-            select.innerHTML = '<option value="">ج�&�`ع ا��طاعات</option>' +
+            select.innerHTML = '<option value="">جميع القطاعات</option>' +
                 state.sectors.map(s => `<option value="${s}">${s}</option>`).join('');
             select.value = currentValue;
         }
@@ -1492,9 +1042,9 @@ async function loadWatchlistPage() {
         document.getElementById('watchlistEmpty')?.classList.remove('hidden');
         document.getElementById('watchlistEmpty').innerHTML = `
             <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
-            <p class="text-gray-500 mb-4">�`جب تسج�`� ا�دخ��� �عرض �ائ�&ة ا��&را�بة</p>
+            <p class="text-gray-500 mb-4">يجب تسجيل الدخول لعرض قائمة المراقبة</p>
             <button onclick="openAuthModal('login')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm">
-                تسج�`� ا�دخ���
+                تسجيل الدخول
             </button>
         `;
         return;
@@ -1525,8 +1075,8 @@ async function loadWatchlistPage() {
                     ${item.price_change ? (item.price_change >= 0 ? '+' : '') + item.price_change.toFixed(2) + '%' : '-'}
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500">
-                    ${item.alert_price_above ? `أع��0 �&�  ${item.alert_price_above}` : ''}
-                    ${item.alert_price_below ? `أ�� �&�  ${item.alert_price_below}` : ''}
+                    ${item.alert_price_above ? `أعلى من ${item.alert_price_above}` : ''}
+                    ${item.alert_price_below ? `أقل من ${item.alert_price_below}` : ''}
                     ${!item.alert_price_above && !item.alert_price_below ? '-' : ''}
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500">${item.notes || '-'}</td>
@@ -1538,8 +1088,8 @@ async function loadWatchlistPage() {
             </tr>
         `).join('');
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� �ائ�&ة ا��&را�بة:', error);
-        showNotification('فش� تح�&�`� �ائ�&ة ا��&را�بة', 'danger');
+        console.error('خطأ في تحميل قائمة المراقبة:', error);
+        showNotification('فشل تحميل قائمة المراقبة', 'danger');
     }
 }
 
@@ -1550,9 +1100,9 @@ async function loadPortfolioPage() {
         document.getElementById('assetsEmpty')?.classList.remove('hidden');
         document.getElementById('assetsEmpty').innerHTML = `
             <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
-            <p class="text-gray-500 mb-4">�`جب تسج�`� ا�دخ��� �عرض �&حفظتْ</p>
+            <p class="text-gray-500 mb-4">يجب تسجيل الدخول لعرض محفظتك</p>
             <button onclick="openAuthModal('login')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm">
-                تسج�`� ا�دخ���
+                تسجيل الدخول
             </button>
         `;
         return;
@@ -1618,8 +1168,8 @@ async function loadPortfolioPage() {
             </tr>
         `).join('');
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا��&حفظة:', error);
-        showNotification('فش� تح�&�`� ا��&حفظة', 'danger');
+        console.error('خطأ في تحميل المحفظة:', error);
+        showNotification('فشل تحميل المحفظة', 'danger');
     }
 }
 
@@ -1637,9 +1187,9 @@ function renderPortfolioRiskInsights(assets = [], summary = null) {
     if (!assets || assets.length === 0) {
         container.innerHTML = `
             <h3 class="font-semibold text-gray-900 mb-2">
-                <i class="fas fa-shield-alt text-emerald-600 ml-2"></i>إرشادات إدارة ا��&خاطر
+                <i class="fas fa-shield-alt text-emerald-600 ml-2"></i>إرشادات إدارة المخاطر
             </h3>
-            <p class="text-sm text-gray-600">أضف أص���ْ أ���ا�9 �عرض تح��`� ت��ز�`ع ا��&حفظة ��ا�ت� ب�`�!ات ا�ذْ�`ة �إدارة ا��&خاطر.</p>
+            <p class="text-sm text-gray-600">أضف أصولاً أولاً لعرض تحليل توزيع المحفظة والتنبيهات الذكية لإدارة المخاطر.</p>
         `;
         return;
     }
@@ -1659,57 +1209,57 @@ function renderPortfolioRiskInsights(assets = [], summary = null) {
         Math.min(100, (typeCount * 18) + Math.min(assets.length, 8) * 5 - Math.max(0, largestPercent - 35))
     );
 
-    const riskLevel = largestPercent >= 45 ? '�&رتفع' : largestPercent >= 30 ? '�&ت��سط' : '�&� خفض';
+    const riskLevel = largestPercent >= 45 ? 'مرتفع' : largestPercent >= 30 ? 'متوسط' : 'منخفض';
     const riskClass = largestPercent >= 45 ? 'text-red-600' : largestPercent >= 30 ? 'text-amber-600' : 'text-emerald-600';
 
     const tips = [];
     if (largestPercent > 35) {
-        tips.push(`ا�ترْ�`ز عا��` ف�` أص� ��احد (${largest?.asset_name || '-'}) ب� سبة ${largestPercent.toFixed(1)}%. �`فض� خفض�! إ��0 أ�� �&�  30%.`);
+        tips.push(`التركيز مرتفع في أصل واحد (${largest?.asset_name || '-'}) بنسبة ${largestPercent.toFixed(1)}%. يُفضل خفضه إلى أقل من 30%.`);
     } else {
-        tips.push('ت��ز�`عْ ع��0 ا�أص��� ا�رئ�`س�`ة ج�`د. حافظ ع��0 حد أ�ص�0 25-30% �ْ� أص�.');
+        tips.push('توزيع الأصول الرئيسية جيد. حافظ على حد أقصى 25-30% لكل أصل.');
     }
 
     if (typeCount < 3) {
-        tips.push('�`ستحس�  ز�`ادة ا�ت� ���`ع ع��0 ا�أ�� إ��0 3 فئات أص��� �&خت�فة �ت���`� ا��&خاطر.');
+        tips.push('يستحسن زيادة التنويع إلى 3 فئات أصول مختلفة على الأقل لتقليل المخاطر.');
     } else {
-        tips.push('ا�ت� ���`ع ب�`�  فئات ا�أص��� ج�`د. را�ب إعادة ا�ت��از�  ش�!ر�`ا�9.');
+        tips.push('التنويع بين فئات الأصول جيد. راقب إعادة التوازن شهرياً.');
     }
 
     if (totalGainPercent < -10) {
-        tips.push('ا��&حفظة ف�` تراجع �&�ح��ظ. راجع �&ت��سطات ا�تْ�فة ��خف�ض ا�ا� ْشاف ع��0 ا�أص��� ا�أع��0 ت��با�9.');
+        tips.push('المحفظة في تراجع ملحوظ. راجع متوسطات التكلفة وخفف الانكشاف على الأصول الأعلى تذبذباً.');
     } else {
-        tips.push('استخد�& �اعدة ا��&خاطرة: �ا تجع� أ�` �&رْز �`تجا��ز 2% �&خاطرة �&�  إج�&ا��` رأس ا��&ا�.');
+        tips.push('استخدم قاعدة المخاطرة: لا تجعل أي مركز يتجاوز 2% مخاطرة من إجمالي رأس المال.');
     }
 
-    tips.push('احتفظ بس�`���ة 10-20% �استغ�ا� ا�فرص ��تخف�`ف أثر ت��بات ا�س���.');
+    tips.push('احتفظ بسيولة 10-20% لاستغلال الفرص وتخفيف أثر تقلبات السوق.');
 
     container.innerHTML = `
         <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
             <h3 class="font-semibold text-gray-900">
-                <i class="fas fa-shield-alt text-emerald-600 ml-2"></i>���حة ا�تحْ�& ف�` ا��&خاطر
+                <i class="fas fa-shield-alt text-emerald-600 ml-2"></i>لوحة التحكم في المخاطر
             </h3>
-            <span class="text-sm ${riskClass} font-semibold">�&ست���0 ا��&خاطر: ${riskLevel}</span>
+            <span class="text-sm ${riskClass} font-semibold">مستوى المخاطر: ${riskLevel}</span>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             <div class="bg-gray-50 rounded-lg p-3">
-                <p class="text-xs text-gray-500">أع��0 ترْ�ز ف�` أص�</p>
+                <p class="text-xs text-gray-500">أعلى تركّز في أصل</p>
                 <p class="font-bold text-gray-900">${largestPercent.toFixed(1)}%</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-3">
-                <p class="text-xs text-gray-500">درجة ا�ت� ���`ع</p>
+                <p class="text-xs text-gray-500">درجة التنويع</p>
                 <p class="font-bold text-gray-900">${diversificationScore.toFixed(0)}/100</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-3">
-                <p class="text-xs text-gray-500">� سبة ا�أص��� ا�ح�ا�</p>
+                <p class="text-xs text-gray-500">نسبة الأصول الحلال</p>
                 <p class="font-bold text-gray-900">${halalPercent.toFixed(1)}%</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-3">
-                <p class="text-xs text-gray-500">عدد فئات ا�أص���</p>
+                <p class="text-xs text-gray-500">عدد فئات الأصول</p>
                 <p class="font-bold text-gray-900">${typeCount}</p>
             </div>
         </div>
         <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-            <h4 class="font-semibold text-emerald-800 mb-2">ت��ج�`�!ات ع�&��`ة �إدارة ا�أص���</h4>
+            <h4 class="font-semibold text-emerald-800 mb-2">توجيهات عملية لإدارة الأصول</h4>
             <ul class="text-sm text-emerald-900 space-y-1">
                 ${tips.map(tip => `<li>⬢ ${tip}</li>`).join('')}
             </ul>
@@ -1795,7 +1345,7 @@ async function initializePortfolioAssetForm() {
     try {
         const stocks = await loadStockOptionsForPortfolio();
         const options = [
-            '<option value="">اختر ا�س�!�&...</option>',
+            '<option value="">اختر السهم...</option>',
             ...stocks.map(stock => {
                 const displayName = stock.name_ar || stock.name || stock.ticker;
                 return `<option value="${stock.ticker}" data-stock-id="${stock.id}" data-stock-name="${displayName}">${stock.ticker} - ${displayName}</option>`;
@@ -1804,7 +1354,7 @@ async function initializePortfolioAssetForm() {
         stockSelect.innerHTML = options.join('');
     } catch (error) {
         console.error('Failed to load stock dropdown options:', error);
-        stockSelect.innerHTML = '<option value="">تعذر تح�&�`� �ائ�&ة ا�أس�!�&</option>';
+        stockSelect.innerHTML = '<option value="">تعذر تحميل قائمة الأسهم</option>';
     }
 }
 
@@ -1814,9 +1364,9 @@ async function loadIncomeExpensePage() {
         document.getElementById('transactionsEmpty')?.classList.remove('hidden');
         document.getElementById('transactionsEmpty').innerHTML = `
             <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
-            <p class="text-gray-500 mb-4">�`جب تسج�`� ا�دخ��� �عرض ا��&عا�&�ات</p>
+            <p class="text-gray-500 mb-4">يجب تسجيل الدخول لعرض المعاملات</p>
             <button onclick="openAuthModal('login')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm">
-                تسج�`� ا�دخ���
+                تسجيل الدخول
             </button>
         `;
         return;
@@ -1853,7 +1403,7 @@ async function loadIncomeExpensePage() {
             <tr class="border-b border-gray-100 hover:bg-gray-50">
                 <td class="px-6 py-4">
                     <span class="px-2 py-1 text-xs rounded-full ${t.transaction_type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
-                        ${t.transaction_type === 'income' ? 'دخ�' : '�&صر��ف'}
+                        ${t.transaction_type === 'income' ? 'دخل' : 'مصروف'}
                     </span>
                 </td>
                 <td class="px-6 py-4">${getCategoryLabel(t.category)}</td>
@@ -1870,8 +1420,8 @@ async function loadIncomeExpensePage() {
             </tr>
         `).join('');
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا��&عا�&�ات:', error);
-        showNotification('فش� تح�&�`� ا��&عا�&�ات', 'danger');
+        console.error('خطأ في تحميل المعاملات:', error);
+        showNotification('فشل تحميل المعاملات', 'danger');
     }
 }
 
@@ -1881,9 +1431,9 @@ async function loadAlertsPage() {
         document.getElementById('alertsEmpty')?.classList.remove('hidden');
         document.getElementById('alertsEmpty').innerHTML = `
             <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
-            <p class="text-gray-500 mb-4">�`جب تسج�`� ا�دخ��� �عرض ا�ت� ب�`�!ات</p>
+            <p class="text-gray-500 mb-4">يجب تسجيل الدخول لعرض التنبيهات</p>
             <button onclick="openAuthModal('login')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm">
-                تسج�`� ا�دخ���
+                تسجيل الدخول
             </button>
         `;
         return;
@@ -1918,7 +1468,7 @@ async function loadAlertsPage() {
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="px-2 py-1 text-xs rounded-full ${alert.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">
-                        ${alert.is_active ? '� شط' : '�&ت���ف'}
+                        ${alert.is_active ? 'نشط' : 'متوقف'}
                     </span>
                     <button onclick="deleteAlertConfirm(${alert.id})" class="text-red-500 hover:text-red-700">
                         <i class="fas fa-trash"></i>
@@ -1927,8 +1477,8 @@ async function loadAlertsPage() {
             </div>
         `).join('');
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا�ت� ب�`�!ات:', error);
-        showNotification('فش� تح�&�`� ا�ت� ب�`�!ات', 'danger');
+        console.error('خطأ في تحميل التنبيهات:', error);
+        showNotification('فشل تحميل التنبيهات', 'danger');
     }
 }
 
@@ -1976,7 +1526,7 @@ async function loadNewsPage() {
         contentEl?.classList.remove('hidden');
         
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا�أخبار:', error);
+        console.error('خطأ في تحميل الأخبار:', error);
         loadingEl?.classList.add('hidden');
         contentEl?.classList.remove('hidden');
         
@@ -1986,7 +1536,7 @@ async function loadNewsPage() {
             newsList.innerHTML = `
                 <div class="text-center py-8">
                     <i class="fas fa-exclamation-circle text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">فش� تح�&�`� ا�أخبار. �`رج�0 ا��&حا���ة �&رة أخر�0.</p>
+                    <p class="text-gray-500">فشل تحميل الأخبار. يرجى المحاولة مرة أخرى.</p>
                 </div>
             `;
         }
@@ -2093,7 +1643,7 @@ function renderNewsList(category) {
         newsListEl.innerHTML = `
             <div class="text-center py-8">
                 <i class="fas fa-newspaper text-4xl text-gray-300 mb-4"></i>
-                <p class="text-gray-500">�ا ت��جد أخبار �&تاحة حا��`ا�9</p>
+                <p class="text-gray-500">لا توجد أخبار متاحة حالياً</p>
             </div>
         `;
         return;
@@ -2106,9 +1656,9 @@ function renderNewsList(category) {
             low: 'bg-green-100 text-green-700'
         };
         const importanceLabels = {
-            high: '�&�!�&',
-            medium: '�&ت��سط',
-            low: 'عاد�`'
+            high: 'مهم',
+            medium: 'متوسط',
+            low: 'عادي'
         };
         
         const publishedDate = new Date(item.published_at);
@@ -2120,7 +1670,7 @@ function renderNewsList(category) {
                     <div class="flex-1">
                         <div class="flex items-center gap-2 mb-2">
                             <span class="px-2 py-1 text-xs rounded-full ${importanceColors[item.importance] || importanceColors.low}">
-                                ${importanceLabels[item.importance] || 'عاد�`'}
+                                ${importanceLabels[item.importance] || 'عادي'}
                             </span>
                             <span class="text-xs text-gray-500">${item.source}</span>
                             <span class="text-xs text-gray-400">⬢ ${timeAgo}</span>
@@ -2160,7 +1710,7 @@ function showNewsDetail(category, index) {
                     <div class="mt-6 pt-4 border-t border-gray-200">
                         <p class="text-xs text-gray-500">
                             <i class="fas fa-info-circle ml-1"></i>
-                            �!ذ�! ا��&ع����&ات ��أغراض ا�تع��`�&�`ة ف�ط ���ا تعتبر � ص�`حة استث�&ار�`ة.
+                            هذه المعلومات لأغراض تعليمية فقط ولا تُعتبر نصيحة استثمارية.
                         </p>
                     </div>
                 </div>
@@ -2189,10 +1739,10 @@ function getTimeAgo(date) {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
     
-    if (diffMins < 1) return 'ا�آ� ';
-    if (diffMins < 60) return `�&� ذ ${diffMins} د��`�ة`;
-    if (diffHours < 24) return `�&� ذ ${diffHours} ساعة`;
-    if (diffDays < 7) return `�&� ذ ${diffDays} �`���&`;
+    if (diffMins < 1) return 'الآن';
+    if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
+    if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+    if (diffDays < 7) return `منذ ${diffDays} يوم`;
     
     return date.toLocaleDateString('ar-EG');
 }
@@ -2226,7 +1776,7 @@ async function loadSettingsPage() {
             document.getElementById('settingsRiskTolerance').value = userState.user?.default_risk_tolerance || 'medium';
         }
     } catch (error) {
-        console.error('خطأ ف�` تح�&�`� ا�إعدادات:', error);
+        console.error('خطأ في تحميل الإعدادات:', error);
     }
 }
 
@@ -2234,15 +1784,15 @@ async function loadSettingsPage() {
 
 function getAssetTypeLabel(type) {
     const labels = {
-        'stock': 'س�!�&',
-        'cash': '� �د',
-        'gold': 'ذ�!ب',
+        'stock': 'سهم',
+        'cash': 'نقد',
+        'gold': 'ذهب',
         'silver': 'فضة',
-        'crypto': 'ع�&�ة ر��&�`ة',
-        'bond': 'س� د',
-        'sukuk': 'صْ��ْ',
-        'fund': 'ص� د���',
-        'realestate': 'ع�ار'
+        'crypto': 'عملة رقمية',
+        'bond': 'سند',
+        'sukuk': 'صكوك',
+        'fund': 'صندوق',
+        'realestate': 'عقار'
     };
     return labels[type] || type;
 }
@@ -2265,14 +1815,14 @@ function getAssetTypeClass(type) {
 function getCategoryLabel(category) {
     const labels = {
         'salary': 'راتب',
-        'dividend': 'أرباح ا�أس�!�&',
-        'trading_profit': 'أرباح ا�تدا���',
-        'investment': 'استث�&ار',
-        'bills': 'ف��ات�`ر',
-        'food': 'طعا�&',
-        'transport': '�&��اص�ات',
-        'entertainment': 'ترف�`�!',
-        'other': 'أخر�0'
+        'dividend': 'أرباح الأسهم',
+        'trading_profit': 'أرباح التداول',
+        'investment': 'استثمار',
+        'bills': 'فواتير',
+        'food': 'طعام',
+        'transport': 'مواصلات',
+        'entertainment': 'ترفيه',
+        'other': 'أخرى'
     };
     return labels[category] || category;
 }
@@ -2290,10 +1840,10 @@ function getAdviceIcon(type) {
 
 function getFrequencyLabel(frequency) {
     const labels = {
-        'once': '�&رة ��احدة',
-        'daily': '�`���&�`',
-        'weekly': 'أسب��ع�`',
-        'monthly': 'ش�!ر�`'
+        'once': 'مرة واحدة',
+        'daily': 'يومي',
+        'weekly': 'أسبوعي',
+        'monthly': 'شهري'
     };
     return labels[frequency] || frequency;
 }
@@ -2322,7 +1872,7 @@ document.getElementById('newAssetForm')?.addEventListener('submit', async (e) =>
     const selectedStockOption = assetStockSelect?.selectedOptions?.[0];
 
     if (assetType === 'stock' && (!selectedStockOption || !selectedStockOption.value)) {
-        showNotification('J1,I '.*J'1 'D3GE EF 'DB'&E)', 'warning');
+        showNotification('يرجى اختيار سهم من القائمة', 'warning');
         return;
     }
     
@@ -2349,7 +1899,7 @@ document.getElementById('newAssetForm')?.addEventListener('submit', async (e) =>
         window.toggleAddAssetForm();
         loadPortfolioPage();
     } catch (error) {
-        console.error('خطأ ف�` إضافة ا�أص�:', error);
+        console.error('خطأ في إضافة الأصل:', error);
     }
 });
 
@@ -2374,7 +1924,7 @@ document.getElementById('newTransactionForm')?.addEventListener('submit', async 
         window.toggleAddTransactionForm();
         loadIncomeExpensePage();
     } catch (error) {
-        console.error('خطأ ف�` إضافة ا��&عا�&�ة:', error);
+        console.error('خطأ في إضافة المعاملة:', error);
     }
 });
 
@@ -2390,48 +1940,48 @@ document.getElementById('transactionRecurring')?.addEventListener('change', (e) 
 
 // حذف ع� اصر ا��&را�بة
 window.removeWatchlistItem = async function(itemId) {
-    if (confirm('�!� أ� ت �&تأْد �&�  إزا�ة �!ذا ا�س�!�& �&�  �ائ�&ة ا��&را�بة�x')) {
+    if (confirm('هل أنت متأكد من إزالة هذا السهم من قائمة المراقبة؟')) {
         try {
             await removeFromWatchlist(itemId);
             loadWatchlistPage();
         } catch (error) {
-            console.error('خطأ ف�` إزا�ة ا�ع� صر:', error);
+            console.error('خطأ في إزالة العنصر:', error);
         }
     }
 };
 
 // حذف ا�أص���
 window.deleteAssetConfirm = async function(assetId) {
-    if (confirm('�!� أ� ت �&تأْد �&�  حذف �!ذا ا�أص��x')) {
+    if (confirm('هل أنت متأكد من حذف هذا الأصل؟')) {
         try {
             await deleteAsset(assetId);
             loadPortfolioPage();
         } catch (error) {
-            console.error('خطأ ف�` حذف ا�أص�:', error);
+            console.error('خطأ في حذف الأصل:', error);
         }
     }
 };
 
 // حذف ا��&عا�&�ات
 window.deleteTransactionConfirm = async function(transactionId) {
-    if (confirm('�!� أ� ت �&تأْد �&�  حذف �!ذ�! ا��&عا�&�ة�x')) {
+    if (confirm('هل أنت متأكد من حذف هذه المعاملة؟')) {
         try {
             await deleteIncomeExpense(transactionId);
             loadIncomeExpensePage();
         } catch (error) {
-            console.error('خطأ ف�` حذف ا��&عا�&�ة:', error);
+            console.error('خطأ في حذف المعاملة:', error);
         }
     }
 };
 
 // حذف ا�ت� ب�`�!ات
 window.deleteAlertConfirm = async function(alertId) {
-    if (confirm('�!� أ� ت �&تأْد �&�  حذف �!ذا ا�ت� ب�`�!�x')) {
+    if (confirm('هل أنت متأكد من حذف هذا التنبيه؟')) {
         try {
             await deleteScheduledAdvice(alertId);
             loadAlertsPage();
         } catch (error) {
-            console.error('خطأ ف�` حذف ا�ت� ب�`�!:', error);
+            console.error('خطأ في حذف التنبيه:', error);
         }
     }
 };
@@ -2439,12 +1989,12 @@ window.deleteAlertConfirm = async function(alertId) {
 // �&زا�&� ة أسعار ا�أص���
 window.syncAssetPrices = async function() {
     try {
-        showNotification('جار�` تحد�`ث ا�أسعار...', 'info');
+        showNotification('جاري تحديث الأسعار...', 'info');
         await apiService.syncAssetPrices();
-        showNotification('ت�& تحد�`ث ا�أسعار ب� جاح', 'success');
+        showNotification('تم تحديث الأسعار بنجاح', 'success');
         loadPortfolioPage();
     } catch (error) {
-        showNotification('فش� تحد�`ث ا�أسعار', 'danger');
+        showNotification('فشل تحديث الأسعار', 'danger');
     }
 };
 
@@ -2455,7 +2005,7 @@ window.copyApiKey = function() {
     input.select();
     document.execCommand('copy');
     input.type = 'password';
-    showNotification('ت�& � سخ �&فتاح API', 'success');
+    showNotification('تم نسخ مفتاح API', 'success');
 };
 
 // حفظ ا�إعدادات
@@ -2470,29 +2020,212 @@ document.getElementById('settingsForm')?.addEventListener('submit', async (e) =>
     try {
         await updateUserSettings(settingsData);
     } catch (error) {
-        console.error('خطأ ف�` حفظ ا�إعدادات:', error);
+        console.error('خطأ في حفظ الإعدادات:', error);
     }
 });
 
 function getComplianceText(status) {
     const texts = {
-        'halal': 'ح�ا�',
-        'haram': 'حرا�&',
-        'doubtful': '�&شْ��ْ',
-        'unknown': 'غ�`ر �&عر��ف'
+        'halal': 'حلال',
+        'haram': 'حرام',
+        'doubtful': 'مشكوك',
+        'controversial': 'مشكوك',
+        'unknown': 'غير معروف'
     };
-    return texts[status?.toLowerCase()] || status?.toUpperCase() || 'غ�`ر �&عر��ف';
+    return texts[status?.toLowerCase()] || 'غير معروف';
 }
 
 function getRiskAssessmentText(key) {
     const texts = {
-        'overall_risk': 'ا��&خاطر ا�إج�&ا��`ة',
-        'volatility': 'ا�ت��ب',
-        'concentration_risk': '�&خاطر ا�ترْز',
-        'sector_diversification': 'ت� ��ع ا��طاعات',
-        'shariah_compliance': 'ا�ا�&تثا� ا�شرع�`',
-        'liquidity_risk': '�&خاطر ا�س�`���ة',
+        'overall_risk': 'المخاطر الإجمالية',
+        'volatility': 'التقلب',
+        'concentration_risk': 'مخاطر التركز',
+        'sector_diversification': 'تنويع القطاعات',
+        'shariah_compliance': 'الامتثال الشرعي',
+        'liquidity_risk': 'مخاطر السيولة',
     };
     return texts[key] || key.replace(/_/g, ' ');
 }
+
+// ==================== صفحة الاشتراك ====================
+
+async function loadSubscriptionPage() {
+    const grid        = document.getElementById('plansGrid');
+    const banner      = document.getElementById('currentPlanBanner');
+    const planName    = document.getElementById('currentPlanName');
+    const planExpiry  = document.getElementById('currentPlanExpiry');
+    const resultAlert = document.getElementById('paymentResultAlert');
+
+    // Show payment result if redirected back from Paymob
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get('payment');
+    if (paymentStatus && resultAlert) {
+        if (paymentStatus === 'success') {
+            resultAlert.className = 'mb-6 p-4 rounded-xl text-sm font-medium bg-green-100 text-green-800 border border-green-200';
+            resultAlert.innerHTML = '<i class="fas fa-check-circle ml-2"></i>تم الدفع بنجاح! تم تفعيل اشتراكك.';
+        } else {
+            resultAlert.className = 'mb-6 p-4 rounded-xl text-sm font-medium bg-red-100 text-red-800 border border-red-200';
+            resultAlert.innerHTML = '<i class="fas fa-times-circle ml-2"></i>لم يتم إتمام الدفع. يرجى المحاولة مرة أخرى.';
+        }
+        resultAlert.classList.remove('hidden');
+        // Clean URL
+        window.history.replaceState({}, '', '/');
+    }
+
+    // Load current subscription if logged in
+    let currentPlan = 'free';
+    if (userState.isAuthenticated && apiService.hasApiKey()) {
+        try {
+            const sub = await apiService.request('/payment/subscription');
+            currentPlan = sub.plan || 'free';
+            if (planName) planName.textContent = {free:'مجاني', pro:'احترافي', premium:'بريميوم'}[currentPlan] || currentPlan;
+            if (planExpiry && sub.expires_at) {
+                const d = new Date(sub.expires_at);
+                planExpiry.textContent = 'ينتهي في: ' + d.toLocaleDateString('ar-EG');
+            } else if (planExpiry && currentPlan === 'free') {
+                planExpiry.textContent = 'الخطة المجانية - لا تنتهي';
+            }
+            // Gradient by plan
+            if (banner) {
+                const gradients = {
+                    free:    'from-gray-500 to-gray-600',
+                    pro:     'from-blue-600 to-indigo-600',
+                    premium: 'from-purple-600 to-pink-600'
+                };
+                banner.className = banner.className.replace(/from-\S+ to-\S+/, gradients[currentPlan] || gradients.free);
+            }
+        } catch(e) { /* ignore */ }
+    }
+
+    // Fetch plans from backend
+    // Fallback plans used when backend is unreachable
+    const FALLBACK_PLANS = [
+        {
+            id: 'free', name: 'مجاني', description: 'الوصول الأساسي لبيانات البورصة',
+            price_monthly: 0, price_yearly: 0,
+            features: ['عرض أسعار الأسهم الأساسية', 'مؤشرات السوق الرئيسية', 'قائمة مراقبة (حتى 5 أسهم)', 'فحص الامتثال الشرعي']
+        },
+        {
+            id: 'pro', name: 'احترافي', description: 'للمستثمر الجاد',
+            price_monthly: 99, price_yearly: 990,
+            features: ['كل ميزات الخطة المجانية', 'تحليل متعمق بالذكاء الاصطناعي', 'قائمة مراقبة غير محدودة', 'توصيات استثمارية ذكية', 'تنبيهات الأسعار الفورية', 'بيانات تاريخية كاملة', 'محافظ متعددة']
+        },
+        {
+            id: 'premium', name: 'بريميوم', description: 'للمحترفين والمؤسسات',
+            price_monthly: 199, price_yearly: 1990,
+            features: ['كل ميزات الخطة الاحترافية', 'تحليل AI بلا حدود', 'تقارير متقدمة قابلة للتصدير', 'API مباشر للبيانات', 'دعم ذو أولوية', 'وصول مبكر للميزات الجديدة']
+        }
+    ];
+
+    let plans = [];
+    try {
+        const data = await apiService.request('/payment/plans');
+        plans = data.plans || FALLBACK_PLANS;
+    } catch(e) {
+        plans = FALLBACK_PLANS;
+    }
+
+    // Billing cycle state
+    let isYearly = false;
+    const toggle      = document.getElementById('billingToggle');
+    const toggleThumb = document.getElementById('billingToggleThumb');
+
+    function renderPlans() {
+        if (!grid) return;
+        grid.innerHTML = plans.map(plan => {
+            const price   = isYearly ? plan.price_yearly : plan.price_monthly;
+            const period  = isYearly ? 'سنة' : 'شهر';
+            const isCurrent = plan.id === currentPlan;
+            const isFree    = plan.id === 'free';
+            const planKey   = isYearly ? `${plan.id}-yearly` : `${plan.id}-monthly`;
+
+            const featuresHtml = plan.features.map(f =>
+                `<li class="flex items-center gap-2 text-sm text-gray-600">
+                    <i class="fas fa-check text-green-500 text-xs"></i>${f}
+                 </li>`
+            ).join('');
+
+            const highlight = plan.id === 'pro'
+                ? 'ring-2 ring-blue-500 shadow-lg scale-105' : '';
+            const badgeHtml = plan.id === 'pro'
+                ? '<span class="absolute -top-3 right-1/2 translate-x-1/2 bg-blue-500 text-white text-xs px-3 py-1 rounded-full">الأكثر شيوعًا</span>'
+                : '';
+
+            const btnLabel = isCurrent ? 'خطتك الحالية'
+                : isFree ? 'البدء مجانًا'
+                : 'اشترك الآن';
+            const btnClass = isCurrent
+                ? 'w-full py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-500 cursor-default'
+                : 'w-full py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-colors';
+
+            return `
+            <div class="relative bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col ${highlight}">
+                ${badgeHtml}
+                <h4 class="text-lg font-bold text-gray-900 mb-1">${plan.name}</h4>
+                <p class="text-sm text-gray-500 mb-4">${plan.description}</p>
+                <div class="mb-6">
+                    ${price === 0
+                        ? '<span class="text-3xl font-bold text-gray-900">مجاني</span>'
+                        : `<span class="text-3xl font-bold text-gray-900">${price} ج.م</span>
+                           <span class="text-sm text-gray-500"> / ${period}</span>`
+                    }
+                </div>
+                <ul class="space-y-2 mb-6 flex-1">${featuresHtml}</ul>
+                <button class="${btnClass}" ${isCurrent ? 'disabled' : ''}
+                    data-plan="${planKey}" onclick="startPayment('${planKey}')">
+                    ${btnLabel}
+                </button>
+            </div>`;
+        }).join('');
+    }
+
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            isYearly = !isYearly;
+            toggle.style.backgroundColor = isYearly ? '#2563eb' : '';
+            if (toggleThumb) {
+                toggleThumb.style.right  = isYearly ? 'auto' : '4px';
+                toggleThumb.style.left   = isYearly ? '4px'  : 'auto';
+            }
+            renderPlans();
+        });
+    }
+
+    renderPlans();
+
+    // Cancel payment
+    const cancelBtn = document.getElementById('cancelPayment');
+    if (cancelBtn) {
+        cancelBtn.onclick = () => {
+            document.getElementById('paymobContainer')?.classList.add('hidden');
+            document.getElementById('paymobIframe').src = '';
+        };
+    }
+}
+
+// Called from inline onclick in subscription plan cards
+window.startPayment = async function(plan) {
+    if (!userState.isAuthenticated || !apiService.hasApiKey()) {
+        alert('يرجى تسجيل الدخول أولاً للاشتراك.');
+        window.navigateToPage && window.navigateToPage('settings');
+        return;
+    }
+    if (plan.startsWith('free')) return;
+
+    const container = document.getElementById('paymobContainer');
+    const iframe    = document.getElementById('paymobIframe');
+    if (!container || !iframe) return;
+
+    try {
+        const result = await apiService.request('/payment/initiate', {
+            method: 'POST',
+            body: JSON.stringify({ plan })
+        });
+        iframe.src = result.iframe_url;
+        container.classList.remove('hidden');
+        container.scrollIntoView({ behavior: 'smooth' });
+    } catch(e) {
+        alert('حدث خطأ أثناء تجهيز الدفع: ' + (e.message || 'يرجى المحاولة لاحقاً'));
+    }
+};
 
