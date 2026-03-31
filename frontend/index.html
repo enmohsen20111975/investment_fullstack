@@ -1917,16 +1917,17 @@
                                         <option value="realestate">عقار</option>
                                     </select>
                                 </div>
-                                <div>
+                                <div id="assetNameContainer">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">اسم الأصل</label>
                                     <input type="text" id="assetName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="مثال: أوراسكوم للإنشاءات">
                                 </div>
                                 <div id="stockSelectionContainer" class="hidden">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">اختر السهم من القائمة</label>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">اسم السهم من القائمة</label>
                                     <select id="assetStockSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
                                         <option value="">اختر السهم...</option>
                                     </select>
-                                    <p class="text-xs text-gray-500 mt-1">عند اختيار السهم يتم تعبئة الاسم والرمز تلقائياً.</p>
+                                    <p class="text-xs text-gray-500 mt-1">عند اختيار السهم يتم تعبئة اسم الأصل والرمز وسعر الشراء تلقائياً (يمكنك تعديل السعر قبل الحفظ).</p>
+                                    <div id="selectedStockMeta" class="hidden mt-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-2"></div>
                                     <input type="hidden" id="assetStockId">
                                 </div>
                                 <div>
@@ -1945,7 +1946,9 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-1">تاريخ الشراء</label>
                                     <input type="date" id="assetPurchaseDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
                                 </div>
-                                <div class="flex items-center">
+                                <div class="flex items-center md:col-span-2 lg:col-span-3">
+                                    <input type="checkbox" id="linkAssetToCashflow" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" checked>
+                                    <label for="linkAssetToCashflow" class="mr-2 text-sm text-gray-700">تسجيل العملية تلقائياً في الدخل/المصروفات كـ "مصروف استثماري"</label>
                                 </div>
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات</label>
@@ -2034,6 +2037,27 @@
                                     <p class="text-xs text-gray-500">صافي التدفق النقدي</p>
                                     <p class="text-xl font-bold" id="netCashFlow">-</p>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="investmentCashflowBridge" class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-5">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="fas fa-link text-indigo-600"></i>
+                            <h3 class="font-semibold text-gray-900">الربط الذكي بين الاستثمار والتدفق النقدي</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                            <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+                                <p class="text-gray-600 mb-1">إجمالي الاستثمار المسجل (مصروف)</p>
+                                <p class="font-bold text-gray-900" id="investmentSpent">-</p>
+                            </div>
+                            <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-3">
+                                <p class="text-gray-600 mb-1">القيمة الحالية للمحفظة</p>
+                                <p class="font-bold text-gray-900" id="investmentCurrentValue">-</p>
+                            </div>
+                            <div class="bg-amber-50 border border-amber-100 rounded-lg p-3">
+                                <p class="text-gray-600 mb-1">العائد غير المحقق (تقديري)</p>
+                                <p class="font-bold" id="investmentUnrealizedPnL">-</p>
                             </div>
                         </div>
                     </div>

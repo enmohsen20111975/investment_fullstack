@@ -1535,16 +1535,20 @@ async function loadStockOptionsForPortfolio() {
 
 function updateAssetNameModeByType() {
     const assetTypeEl = document.getElementById('assetType');
+    const assetNameContainerEl = document.getElementById('assetNameContainer');
     const assetNameEl = document.getElementById('assetName');
     const assetTickerEl = document.getElementById('assetTicker');
+    const assetPurchasePriceEl = document.getElementById('assetPurchasePrice');
     const stockSelectContainer = document.getElementById('stockSelectionContainer');
     const stockSelect = document.getElementById('assetStockSelect');
     const stockIdEl = document.getElementById('assetStockId');
+    const selectedStockMetaEl = document.getElementById('selectedStockMeta');
 
-    if (!assetTypeEl || !assetNameEl || !assetTickerEl || !stockSelectContainer || !stockSelect || !stockIdEl) return;
+    if (!assetTypeEl || !assetNameEl || !assetTickerEl || !assetPurchasePriceEl || !stockSelectContainer || !stockSelect || !stockIdEl || !selectedStockMetaEl) return;
 
     const isStock = assetTypeEl.value === 'stock';
 
+    assetNameContainerEl?.classList.toggle('hidden', isStock);
     stockSelectContainer.classList.toggle('hidden', !isStock);
     assetNameEl.readOnly = isStock;
     assetTickerEl.readOnly = isStock;
@@ -1552,8 +1556,11 @@ function updateAssetNameModeByType() {
     if (!isStock) {
         stockSelect.value = '';
         stockIdEl.value = '';
+        selectedStockMetaEl.classList.add('hidden');
+        selectedStockMetaEl.textContent = '';
         assetNameEl.value = '';
         assetTickerEl.value = '';
+        assetPurchasePriceEl.value = '';
     }
 }
 
@@ -1562,9 +1569,11 @@ async function initializePortfolioAssetForm() {
     const stockSelect = document.getElementById('assetStockSelect');
     const assetNameEl = document.getElementById('assetName');
     const assetTickerEl = document.getElementById('assetTicker');
+    const assetPurchasePriceEl = document.getElementById('assetPurchasePrice');
     const stockIdEl = document.getElementById('assetStockId');
+    const selectedStockMetaEl = document.getElementById('selectedStockMeta');
 
-    if (!assetTypeEl || !stockSelect || !assetNameEl || !assetTickerEl || !stockIdEl) return;
+    if (!assetTypeEl || !stockSelect || !assetNameEl || !assetTickerEl || !assetPurchasePriceEl || !stockIdEl || !selectedStockMetaEl) return;
 
     if (!stockSelect.dataset.initialized) {
         stockSelect.dataset.initialized = 'true';
@@ -1574,14 +1583,26 @@ async function initializePortfolioAssetForm() {
             const selected = stockSelect.selectedOptions[0];
             if (!selected || !selected.value) {
                 stockIdEl.value = '';
+                selectedStockMetaEl.classList.add('hidden');
+                selectedStockMetaEl.textContent = '';
                 assetNameEl.value = '';
                 assetTickerEl.value = '';
                 return;
             }
 
+            const selectedPrice = selected.dataset.stockPrice ? parseFloat(selected.dataset.stockPrice) : null;
             stockIdEl.value = selected.dataset.stockId || '';
             assetNameEl.value = selected.dataset.stockName || selected.textContent || '';
             assetTickerEl.value = selected.value || '';
+
+            if (selectedPrice && selectedPrice > 0) {
+                assetPurchasePriceEl.value = selectedPrice.toFixed(2);
+                selectedStockMetaEl.innerHTML = `آخر سعر متاح: <strong>${formatCurrency(selectedPrice)}</strong> • يمكنك التعديل قبل الحفظ`;
+                selectedStockMetaEl.classList.remove('hidden');
+            } else {
+                selectedStockMetaEl.innerHTML = 'لا يوجد سعر سوقي متاح حاليًا، أدخل سعر الشراء يدويًا.';
+                selectedStockMetaEl.classList.remove('hidden');
+            }
         });
     }
 
@@ -1593,7 +1614,8 @@ async function initializePortfolioAssetForm() {
             '<option value="">اختر السهم...</option>',
             ...stocks.map(stock => {
                 const displayName = stock.name_ar || stock.name || stock.ticker;
-                return `<option value="${stock.ticker}" data-stock-id="${stock.id}" data-stock-name="${displayName}">${stock.ticker} - ${displayName}</option>`;
+                const latestPrice = stock.current_price || stock.price || stock.close_price || '';
+                return `<option value="${stock.ticker}" data-stock-id="${stock.id}" data-stock-name="${displayName}" data-stock-price="${latestPrice}">${displayName} (${stock.ticker})</option>`;
             })
         ];
         stockSelect.innerHTML = options.join('');
@@ -1622,7 +1644,10 @@ async function loadIncomeExpensePage() {
         document.getElementById('transactionsEmpty')?.classList.add('hidden');
         document.getElementById('transactionsTableContainer')?.classList.add('hidden');
 
-        const transactions = await loadIncomeExpenses();
+        const [transactions, summary] = await Promise.all([
+            loadIncomeExpenses(),
+            loadFinancialSummary().catch(() => null)
+        ]);
         
         // حساب ا�إج�&ا��`ات
         const totalIncome = transactions?.filter(t => t.transaction_type === 'income').reduce((sum, t) => sum + t.amount, 0) || 0;
@@ -1634,6 +1659,21 @@ async function loadIncomeExpensePage() {
         const netFlowEl = document.getElementById('netCashFlow');
         netFlowEl.textContent = formatCurrency(netCashFlow);
         netFlowEl.className = `text-xl font-bold ${netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`;
+
+        const investmentSpent = transactions?.filter(t => t.transaction_type === 'expense' && t.category === 'investment').reduce((sum, t) => sum + t.amount, 0) || 0;
+        const currentPortfolioValue = getPortfolioSummaryValue(summary, 'total_assets_value', 'total_value');
+        const unrealizedPnL = currentPortfolioValue - investmentSpent;
+
+        const investmentSpentEl = document.getElementById('investmentSpent');
+        const investmentCurrentValueEl = document.getElementById('investmentCurrentValue');
+        const investmentUnrealizedPnLEl = document.getElementById('investmentUnrealizedPnL');
+
+        if (investmentSpentEl) investmentSpentEl.textContent = formatCurrency(investmentSpent);
+        if (investmentCurrentValueEl) investmentCurrentValueEl.textContent = formatCurrency(currentPortfolioValue);
+        if (investmentUnrealizedPnLEl) {
+            investmentUnrealizedPnLEl.textContent = formatCurrency(unrealizedPnL);
+            investmentUnrealizedPnLEl.className = `font-bold ${unrealizedPnL >= 0 ? 'text-green-700' : 'text-red-700'}`;
+        }
 
         document.getElementById('transactionsLoading')?.classList.add('hidden');
 
@@ -2147,8 +2187,28 @@ document.getElementById('newAssetForm')?.addEventListener('submit', async (e) =>
         notes: document.getElementById('assetNotes').value || null
     };
 
+    const shouldLinkToCashflow = document.getElementById('linkAssetToCashflow')?.checked;
+    const estimatedInvestmentCost = (assetData.quantity || 0) * (assetData.purchase_price || 0);
+    const linkTransactionPayload = {
+        transaction_type: 'expense',
+        category: 'investment',
+        amount: estimatedInvestmentCost,
+        transaction_date: assetData.purchase_date || new Date().toISOString().split('T')[0],
+        description: `ربط تلقائي: شراء أصل (${assetData.asset_name}${assetData.asset_ticker ? ' - ' + assetData.asset_ticker : ''})`
+    };
+
     try {
         await createAsset(assetData);
+
+        if (shouldLinkToCashflow && estimatedInvestmentCost > 0) {
+            try {
+                await createIncomeExpense(linkTransactionPayload);
+            } catch (linkError) {
+                console.error('تعذر تسجيل حركة الاستثمار تلقائياً:', linkError);
+                showNotification('تمت إضافة الأصل لكن تعذر ربطه تلقائياً بالدخل/المصروفات', 'warning');
+            }
+        }
+
         document.getElementById('newAssetForm').reset();
         updateAssetNameModeByType();
         window.toggleAddAssetForm();
