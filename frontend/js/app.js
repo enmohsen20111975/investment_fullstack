@@ -40,6 +40,7 @@ import {
     updateAsset,
     deleteAsset,
     createIncomeExpense,
+    updateIncomeExpense,
     deleteIncomeExpense,
     createScheduledAdvice,
     deleteScheduledAdvice,
@@ -1281,7 +1282,7 @@ function updateSectorFilters() {
 // ==================== صفحات ا��&ستخد�& ====================
 
 async function loadWatchlistPage() {
-    if (!userState.isAuthenticated) {
+    if (!apiService.hasApiKey()) {
         document.getElementById('watchlistLoading')?.classList.add('hidden');
         document.getElementById('watchlistEmpty')?.classList.remove('hidden');
         document.getElementById('watchlistEmpty').innerHTML = `
@@ -1339,7 +1340,7 @@ async function loadWatchlistPage() {
 
 async function loadPortfolioPage() {
     initializePortfolioAssetForm();
-    if (!userState.isAuthenticated) {
+    if (!apiService.hasApiKey()) {
         document.getElementById('assetsLoading')?.classList.add('hidden');
         document.getElementById('assetsEmpty')?.classList.remove('hidden');
         document.getElementById('assetsEmpty').innerHTML = `
@@ -1603,7 +1604,7 @@ async function initializePortfolioAssetForm() {
 }
 
 async function loadIncomeExpensePage() {
-    if (!userState.isAuthenticated) {
+    if (!apiService.hasApiKey()) {
         document.getElementById('transactionsLoading')?.classList.add('hidden');
         document.getElementById('transactionsEmpty')?.classList.remove('hidden');
         document.getElementById('transactionsEmpty').innerHTML = `
@@ -1656,8 +1657,11 @@ async function loadIncomeExpensePage() {
                 </td>
                 <td class="px-6 py-4 text-gray-500">${formatDate(t.transaction_date)}</td>
                 <td class="px-6 py-4 text-gray-500">${t.description || '-'}</td>
-                <td class="px-6 py-4">
-                    <button onclick="deleteTransactionConfirm(${t.id})" class="text-red-500 hover:text-red-700">
+                <td class="px-6 py-4 flex items-center gap-3">
+                    <button onclick="openEditTransactionModal(${t.id}, '${encodeURIComponent(JSON.stringify(t))}')" class="text-blue-500 hover:text-blue-700" title="تعديل">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="deleteTransactionConfirm(${t.id})" class="text-red-500 hover:text-red-700" title="حذف">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
@@ -1670,7 +1674,7 @@ async function loadIncomeExpensePage() {
 }
 
 async function loadAlertsPage() {
-    if (!userState.isAuthenticated) {
+    if (!apiService.hasApiKey()) {
         document.getElementById('alertsLoading')?.classList.add('hidden');
         document.getElementById('alertsEmpty')?.classList.remove('hidden');
         document.getElementById('alertsEmpty').innerHTML = `
@@ -2213,7 +2217,7 @@ window.deleteAssetConfirm = async function(assetId) {
     }
 };
 
-// حذف ا��&عا�&�ات
+// حذف المعاملات
 window.deleteTransactionConfirm = async function(transactionId) {
     if (confirm('هل أنت متأكد من حذف هذه المعاملة؟')) {
         try {
@@ -2222,6 +2226,42 @@ window.deleteTransactionConfirm = async function(transactionId) {
         } catch (error) {
             console.error('خطأ في حذف المعاملة:', error);
         }
+    }
+};
+
+// فتح نافذة تعديل المعاملة
+window.openEditTransactionModal = function(transactionId, encodedTransaction) {
+    const t = JSON.parse(decodeURIComponent(encodedTransaction));
+    document.getElementById('editTransactionId').value = transactionId;
+    document.getElementById('editTransactionType').value = t.transaction_type || 'expense';
+    document.getElementById('editTransactionCategory').value = t.category || '';
+    document.getElementById('editTransactionAmount').value = t.amount || '';
+    document.getElementById('editTransactionDate').value = t.transaction_date ? t.transaction_date.substring(0, 10) : '';
+    document.getElementById('editTransactionDescription').value = t.description || '';
+    document.getElementById('editTransactionModal').classList.remove('hidden');
+};
+
+// إغلاق نافذة التعديل
+window.closeEditTransactionModal = function() {
+    document.getElementById('editTransactionModal').classList.add('hidden');
+};
+
+// حفظ تعديل المعاملة
+window.saveEditTransaction = async function() {
+    const transactionId = document.getElementById('editTransactionId').value;
+    const data = {
+        transaction_type: document.getElementById('editTransactionType').value,
+        category: document.getElementById('editTransactionCategory').value,
+        amount: parseFloat(document.getElementById('editTransactionAmount').value),
+        transaction_date: document.getElementById('editTransactionDate').value,
+        description: document.getElementById('editTransactionDescription').value
+    };
+    try {
+        await updateIncomeExpense(transactionId, data);
+        closeEditTransactionModal();
+        loadIncomeExpensePage();
+    } catch (error) {
+        console.error('خطأ في تعديل المعاملة:', error);
     }
 };
 

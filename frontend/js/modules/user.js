@@ -594,6 +594,18 @@ async function deleteIncomeExpense(transactionId) {
     }
 }
 
+async function updateIncomeExpense(transactionId, data) {
+    try {
+        const response = await apiService.updateIncomeExpense(transactionId, data);
+        showNotification('تم تعديل المعاملة بنجاح', 'success');
+        await loadIncomeExpenses();
+        return response;
+    } catch (error) {
+        showNotification(error.message || 'فشل تعديل المعاملة', 'error');
+        throw error;
+    }
+}
+
 // ==================== الملخص المالي ====================
 
 async function loadFinancialSummary() {
@@ -761,6 +773,7 @@ export {
     loadIncomeExpenses,
     createIncomeExpense,
     deleteIncomeExpense,
+    updateIncomeExpense,
     loadFinancialSummary,
     loadScheduledAdvices,
     createScheduledAdvice,
