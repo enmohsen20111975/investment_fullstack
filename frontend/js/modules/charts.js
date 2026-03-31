@@ -59,6 +59,11 @@ export function createCandlestickChart(containerId, historyData, options = {}) {
                 easing: 'easeinout',
                 speed: 800
             },
+            zoom: {
+                enabled: true,
+                type: 'x',
+                autoScaleYaxis: true
+            },
             locales: [{
                 name: 'ar',
                 options: {
@@ -93,6 +98,15 @@ export function createCandlestickChart(containerId, historyData, options = {}) {
         },
         xaxis: {
             type: 'category',
+            crosshairs: {
+                show: true,
+                position: 'back',
+                stroke: {
+                    color: '#60a5fa',
+                    width: 1,
+                    dashArray: 3
+                }
+            },
             labels: {
                 style: {
                     fontFamily: 'Cairo, sans-serif'
@@ -112,6 +126,15 @@ export function createCandlestickChart(containerId, historyData, options = {}) {
         yaxis: {
             tooltip: {
                 enabled: true
+            },
+            crosshairs: {
+                show: true,
+                position: 'back',
+                stroke: {
+                    color: '#60a5fa',
+                    width: 1,
+                    dashArray: 3
+                }
             },
             labels: {
                 style: {
@@ -141,7 +164,7 @@ export function createCandlestickChart(containerId, historyData, options = {}) {
         },
         tooltip: {
             enabled: true,
-            theme: 'light',
+            theme: 'dark',
             style: {
                 fontFamily: 'Cairo, sans-serif'
             },
@@ -157,18 +180,18 @@ export function createCandlestickChart(containerId, historyData, options = {}) {
                 const isUp = c >= o;
 
                 return `
-                    <div class="bg-white p-3 rounded-lg shadow-lg border border-gray-200" dir="rtl">
-                        <div class="text-sm font-semibold text-gray-700 mb-2">${date}</div>
+                    <div class="p-3 rounded-lg shadow-lg border" style="background:#0b1220;color:#e2e8f0;border-color:#1e293b;min-width:220px" dir="rtl">
+                        <div class="text-sm font-semibold mb-2" style="color:#93c5fd">${date}</div>
                         <div class="grid grid-cols-2 gap-2 text-sm">
-                            <div class="text-gray-500">الافتتاح:</div>
+                            <div style="color:#94a3b8">الافتتاح:</div>
                             <div class="font-medium">${o.toFixed(2)}</div>
-                            <div class="text-gray-500">الأعلى:</div>
-                            <div class="font-medium text-green-600">${h.toFixed(2)}</div>
-                            <div class="text-gray-500">الأدنى:</div>
-                            <div class="font-medium text-red-600">${l.toFixed(2)}</div>
-                            <div class="text-gray-500">الإغلاق:</div>
+                            <div style="color:#94a3b8">الأعلى:</div>
+                            <div class="font-medium text-green-400">${h.toFixed(2)}</div>
+                            <div style="color:#94a3b8">الأدنى:</div>
+                            <div class="font-medium text-red-400">${l.toFixed(2)}</div>
+                            <div style="color:#94a3b8">الإغلاق:</div>
                             <div class="font-medium">${c.toFixed(2)}</div>
-                            <div class="text-gray-500">التغير:</div>
+                            <div style="color:#94a3b8">التغير:</div>
                             <div class="font-medium ${isUp ? 'text-green-600' : 'text-red-600'}">
                                 ${isUp ? '+' : ''}${change.toFixed(2)} (${changePercent}%)
                             </div>

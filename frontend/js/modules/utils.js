@@ -222,9 +222,16 @@ export function createIndexCard(index) {
  * @param {number} num - الرقم المراد تنسيقه
  * @returns {string} الرقم المنسق
  */
-export function formatNumber(num) {
-    if (!num) return '-';
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+export function formatNumber(num, decimals) {
+    if (num === null || num === undefined || num === '') return '-';
+    const n = Number(num);
+    if (isNaN(n) || (!n && num !== 0)) return '-';
+    if (decimals !== undefined) {
+        return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+    const parts = n.toString().split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
 }
 
 /**

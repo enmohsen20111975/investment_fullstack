@@ -12,6 +12,26 @@ const { authenticateApiKey, optionalAuth } = require('../middleware/auth');
 const { getMarketStatus: getScheduleStatus, shouldAllowUpdate, getCairoTime } = require('../services/marketScheduleService');
 const { updateStockData, getLastUpdate, getUpdateHistory, checkDataNeedsRefresh } = require('../services/dataUpdateService');
 
+const toNumber = (value, fallback = 0) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+};
+
+function mapIndexResponse(indexModel) {
+    const idx = indexModel.toJSON ? indexModel.toJSON() : indexModel;
+    return {
+        symbol: idx.symbol,
+        name: idx.name,
+        name_ar: idx.name_ar,
+        value: toNumber(idx.current_value, 0),
+        previous_close: toNumber(idx.previous_close, 0),
+        change: toNumber(idx.change, 0),
+        change_percent: toNumber(idx.change_percent, 0),
+        is_shariah: Boolean(idx.is_shariah),
+        last_updated: idx.last_update
+    };
+}
+
 /**
  * @route GET /api/market/overview
  * @desc Get market overview
@@ -33,6 +53,9 @@ router.get('/overview', optionalAuth, async (req, res) => {
         const gainers = stocks.filter(s => s.getPriceChange && s.getPriceChange() > 0).length;
         const losers = stocks.filter(s => s.getPriceChange && s.getPriceChange() < 0).length;
         const unchanged = totalStocks - gainers - losers;
+        const egx30Count = stocks.filter((s) => s.egx30_member).length;
+        const egx70Count = stocks.filter((s) => s.egx70_member).length;
+        const egx100Count = stocks.filter((s) => s.egx100_member).length;
 
         // Get top movers
         const sortedByChange = [...stocks].sort((a, b) => {
@@ -73,6 +96,21 @@ router.get('/overview', optionalAuth, async (req, res) => {
         // Get halal stocks count
         const halalStocks = stocks.filter(s => s.is_halal || s.compliance_status === 'halal').length;
 
+        const mappedIndices = indices.map(mapIndexResponse);
+        const egx30FromTable = mappedIndices.find((idx) => idx.symbol === 'EGX30');
+
+        const egx30MemberPrices = stocks
+            .filter((stock) => stock.egx30_member && Number.isFinite(Number(stock.current_price)))
+            .map((stock) => Number(stock.current_price));
+
+        const egx30FallbackValue = egx30MemberPrices.length
+            ? egx30MemberPrices.reduce((sum, val) => sum + val, 0) / egx30MemberPrices.length
+            : 0;
+
+        const egx30Value = egx30FromTable && egx30FromTable.value > 0
+            ? egx30FromTable.value
+            : Number(egx30FallbackValue.toFixed(4));
+
         res.json({
             market_status: getScheduleStatus(),
             summary: {
@@ -80,17 +118,13 @@ router.get('/overview', optionalAuth, async (req, res) => {
                 gainers,
                 losers,
                 unchanged,
-                halal_stocks: halalStocks
+                halal_stocks: halalStocks,
+                egx30_stocks: egx30Count,
+                egx70_stocks: egx70Count,
+                egx100_stocks: egx100Count,
+                egx30_value: egx30Value
             },
-            indices: indices.map(idx => ({
-                symbol: idx.symbol,
-                name: idx.name,
-                name_ar: idx.name_ar,
-                value: idx.value,
-                change: idx.change,
-                change_percent: idx.change_percent,
-                last_updated: idx.last_updated
-            })),
+            indices: mappedIndices,
             top_gainers: topGainers,
             top_losers: topLosers,
             most_active: mostActive,
@@ -113,7 +147,7 @@ router.get('/indices', optionalAuth, async (req, res) => {
         });
 
         res.json({
-            indices,
+            indices: indices.map(mapIndexResponse),
             total: indices.length
         });
     } catch (error) {

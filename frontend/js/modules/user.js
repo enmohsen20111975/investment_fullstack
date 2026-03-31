@@ -486,10 +486,10 @@ async function loadWatchlist() {
     }
 }
 
-async function addToWatchlist(stockId, options = {}) {
+async function addToWatchlist(ticker, options = {}) {
     try {
         const response = await apiService.addToWatchlist({
-            stock_id: stockId,
+            ticker,
             ...options
         });
         showNotification('تمت الإضافة إلى قائمة المراقبة', 'success');

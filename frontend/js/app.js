@@ -3,7 +3,7 @@
  * واجهة أمامية معيارية باستخدام Tailwind CSS
  */
 
-import apiService from '/static/js/api.js?v=2026030700';
+import apiService from '/static/js/api.js?v=2026033104';
 import {
     createStatCard,
     createBadge,
@@ -16,7 +16,7 @@ import {
     formatNumber,
     formatCurrency,
     formatDate
-} from '/static/js/modules/utils.js';
+} from '/static/js/modules/utils.js?v=2026033105';
 import {
     createCandlestickChart,
     createCombinedChart,
@@ -45,12 +45,22 @@ import {
     deleteScheduledAdvice,
     updateUserSettings,
     showNotification
-} from '/static/js/modules/user.js?v=2026030700';
+} from '/static/js/modules/user.js?v=2026033104';
 
 // Global chart instance for cleanup
 let currentChart = null;
 let globalLoadingCount = 0;
 let globalLoadingTimer = null;
+let liveRefreshTimer = null;
+let liveRefreshInFlight = false;
+
+const LIVE_REFRESH_INTERVALS_MS = {
+    dashboard: 15000,
+    market: 15000,
+    stocks: 20000,
+    halal: 30000,
+    news: 45000
+};
 
 // ==================== حا�ة ا�تطب�`� ====================
 const state = {
@@ -67,6 +77,29 @@ const portfolioUiState = {
     stocksLoaded: false,
     stockOptions: []
 };
+
+async function addTickerToWatchlist(ticker) {
+    if (!ticker) return;
+
+    if (!userState.isAuthenticated) {
+        showNotification('سجل الدخول أولاً لإضافة السهم إلى قائمة المراقبة', 'warning');
+        if (typeof window.openAuthModal === 'function') {
+            window.openAuthModal('login');
+        }
+        return;
+    }
+
+    try {
+        await addToWatchlist(ticker);
+        if (state.currentPage === 'watchlist') {
+            await loadWatchlistPage();
+        }
+    } catch (error) {
+        console.error('Add to watchlist failed:', error);
+    }
+}
+
+window.addTickerToWatchlist = addTickerToWatchlist;
 
 // ==================== ع� اصر DOM ====================
 const elements = {
@@ -146,7 +179,57 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // تحد�`ث حا�ة ا�س��� ْ� د��`�ة
     setInterval(updateMarketStatus, 60000);
+    restartAutoRefreshLoop();
 });
+
+function getLiveRefreshInterval(page = state.currentPage) {
+    return LIVE_REFRESH_INTERVALS_MS[page] || 0;
+}
+
+async function refreshActivePage({ silent = true } = {}) {
+    if (liveRefreshInFlight) return;
+
+    liveRefreshInFlight = true;
+    try {
+        switch (state.currentPage) {
+            case 'dashboard':
+                await loadDashboard({ silent });
+                break;
+            case 'market':
+                await loadMarketOverview({ silent });
+                break;
+            case 'stocks':
+                await loadStocks(state.page || 1, { silent });
+                break;
+            case 'halal':
+                await loadHalalStocks({ silent });
+                break;
+            case 'news':
+                await loadNewsPage({ silent });
+                break;
+            default:
+                break;
+        }
+    } catch (error) {
+        console.error('Live refresh failed:', error);
+    } finally {
+        liveRefreshInFlight = false;
+    }
+}
+
+function restartAutoRefreshLoop() {
+    if (liveRefreshTimer) {
+        clearInterval(liveRefreshTimer);
+        liveRefreshTimer = null;
+    }
+
+    const interval = getLiveRefreshInterval();
+    if (!interval) return;
+
+    liveRefreshTimer = setInterval(() => {
+        refreshActivePage({ silent: true });
+    }, interval);
+}
 
 // ==================== ا�ت� �� ====================
 function initializeNavigation() {
@@ -220,6 +303,7 @@ function navigateTo(page) {
         elements.pageTitle.textContent = titles[page] || 'لوحة التحكم';
 
     state.currentPage = page;
+    restartAutoRefreshLoop();
 
     // Close mobile sidebar after navigation
     if (window.innerWidth <= 768) {
@@ -418,14 +502,17 @@ function closeMobileSidebar() {
 }
 
 // ==================== ���حة ا�تحْ�& ====================
-async function loadDashboard() {
+async function loadDashboard(options = {}) {
+    const { silent = false } = options;
     const loading = document.getElementById('dashboardLoading');
     const content = document.getElementById('dashboardContent');
     
     try {
         // Show loading indicator
-        loading?.classList.remove('hidden');
-        content?.classList.add('hidden');
+        if (!silent) {
+            loading?.classList.remove('hidden');
+            content?.classList.add('hidden');
+        }
         
         const [overview, stocks] = await Promise.all([
             apiService.getMarketOverview(),
@@ -441,11 +528,19 @@ async function loadDashboard() {
         
         // ا�حص��� ع��0 ��`�&ة �&ؤشر EGX30
         const egx30Index = overview.indices?.find(i => i.symbol === 'EGX30');
+        const egx30Value = egx30Index?.value || overview.summary?.egx30_value || 0;
+        const egx30ChangePct = Number(egx30Index?.change_percent ?? 0);
+        const egx30ChangeEl = document.getElementById('egx30ChangePct');
 
         document.getElementById('totalStocks').textContent = totalStocks;
         document.getElementById('gainingStocks').textContent = gainingCount;
         document.getElementById('losingStocks').textContent = losingCount;
-        document.getElementById('egx30Value').textContent = egx30Index?.value ? formatNumber(egx30Index.value, 2) : '-';
+        document.getElementById('egx30Value').textContent = egx30Value ? formatNumber(egx30Value, 2) : '-';
+        if (egx30ChangeEl) {
+            const isUp = egx30ChangePct >= 0;
+            egx30ChangeEl.className = `text-sm font-medium mt-1 ${isUp ? 'text-green-600' : 'text-red-600'}`;
+            egx30ChangeEl.innerHTML = `<i class="fas ${isUp ? 'fa-arrow-up' : 'fa-arrow-down'} text-xs ml-1"></i>${Math.abs(egx30ChangePct).toFixed(2)}%`;
+        }
 
         // تحد�`ث جد��� ا�رابح�`� 
         const gainersTable = document.querySelector('#gainersTable tbody');
@@ -459,7 +554,15 @@ async function loadDashboard() {
                         <i class="fas fa-arrow-up text-xs mr-1"></i>
                         ${stock.price_change?.toFixed(2) || '0.00'}
                     </td>
-                    <td class="px-4 py-3">${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}</td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            ${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}
+                            <button class="px-2 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                                onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
+                                متابعة
+                            </button>
+                        </div>
+                    </td>
                 </tr>
             `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد بيانات متاحة</td></tr>';
         }
@@ -476,7 +579,15 @@ async function loadDashboard() {
                         <i class="fas fa-arrow-down text-xs mr-1"></i>
                         ${Math.abs(stock.price_change || 0).toFixed(2)}
                     </td>
-                    <td class="px-4 py-3">${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}</td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            ${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}
+                            <button class="px-2 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                                onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
+                                متابعة
+                            </button>
+                        </div>
+                    </td>
                 </tr>
             `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد بيانات متاحة</td></tr>';
         }
@@ -486,19 +597,24 @@ async function loadDashboard() {
         updateSectorFilters();
         
         // Show content, hide loading
-        loading?.classList.add('hidden');
-        content?.classList.remove('hidden');
+        if (!silent) {
+            loading?.classList.add('hidden');
+            content?.classList.remove('hidden');
+        }
 
     } catch (error) {
         console.error('خطأ في تحميل لوحة التحكم:', error);
-        showNotification('فشل تحميل بيانات لوحة التحكم', 'danger');
-        loading?.classList.add('hidden');
-        content?.classList.remove('hidden');
+        if (!silent) {
+            showNotification('فشل تحميل بيانات لوحة التحكم', 'danger');
+            loading?.classList.add('hidden');
+            content?.classList.remove('hidden');
+        }
     }
 }
 
 // ==================== � ظرة عا�&ة ع��0 ا�س��� ====================
-async function loadMarketOverview() {
+async function loadMarketOverview(options = {}) {
+    const { silent = false } = options;
     console.log('loadMarketOverview called');
     
     const loading = document.getElementById('marketLoading');
@@ -506,8 +622,10 @@ async function loadMarketOverview() {
     
     try {
         // Show loading indicator
-        loading?.classList.remove('hidden');
-        content?.classList.add('hidden');
+        if (!silent) {
+            loading?.classList.remove('hidden');
+            content?.classList.add('hidden');
+        }
         
         const overview = await apiService.getMarketOverview();
         console.log('Market overview data:', overview);
@@ -531,25 +649,38 @@ async function loadMarketOverview() {
                     <td class="px-4 py-3 text-gray-900">${stock.name_ar || stock.name || '-'}</td>
                     <td class="px-4 py-3 font-medium">${stock.current_price ? formatCurrency(stock.current_price) : '-'}</td>
                     <td class="px-4 py-3 text-gray-500">${formatNumber(stock.volume)}</td>
-                    <td class="px-4 py-3">${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}</td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            ${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}
+                            <button class="px-2 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                                onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
+                                متابعة
+                            </button>
+                        </div>
+                    </td>
                 </tr>
             `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد بيانات متاحة</td></tr>';
         }
         
         // Show content, hide loading
-        loading?.classList.add('hidden');
-        content?.classList.remove('hidden');
+        if (!silent) {
+            loading?.classList.add('hidden');
+            content?.classList.remove('hidden');
+        }
 
     } catch (error) {
         console.error('خطأ في تحميل نظرة السوق:', error);
-        showNotification('فشل تحميل بيانات السوق', 'danger');
-        loading?.classList.add('hidden');
-        content?.classList.remove('hidden');
+        if (!silent) {
+            showNotification('فشل تحميل بيانات السوق', 'danger');
+            loading?.classList.add('hidden');
+            content?.classList.remove('hidden');
+        }
     }
 }
 
 // ==================== ا�أس�!�& ====================
-async function loadStocks(page = 1) {
+async function loadStocks(page = 1, options = {}) {
+    const { silent = false } = options;
     const pageLoading = document.getElementById('stocksPageLoading');
     const pageContent = document.getElementById('stocksPageContent');
     const loading = document.getElementById('stocksLoading');
@@ -557,11 +688,13 @@ async function loadStocks(page = 1) {
 
     try {
         // Show page loading indicator on first load
-        if (page === 1 && state.stocks.length === 0) {
-            pageLoading?.classList.remove('hidden');
-            pageContent?.classList.add('hidden');
-        } else {
-            loading?.classList.remove('hidden');
+        if (!silent) {
+            if (page === 1 && state.stocks.length === 0) {
+                pageLoading?.classList.remove('hidden');
+                pageContent?.classList.add('hidden');
+            } else {
+                loading?.classList.remove('hidden');
+            }
         }
 
         const halalOnly = document.getElementById('halalOnlyFilter')?.checked;
@@ -592,8 +725,13 @@ async function loadStocks(page = 1) {
                 <td class="px-4 py-3 text-gray-500">${stock.sector || '-'}</td>
                 <td class="px-4 py-3">${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}</td>
                 <td class="px-4 py-3">
-                    <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    <button class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        onclick="event.stopPropagation(); showStockDetail('${stock.ticker}')">
                         عرض التفاصيل
+                    </button>
+                    <button class="mr-2 text-emerald-600 hover:text-emerald-800 text-sm font-medium"
+                        onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
+                        متابعة
                     </button>
                 </td>
             </tr>
@@ -607,16 +745,20 @@ async function loadStocks(page = 1) {
         document.getElementById('nextPage').disabled = state.stocks.length < state.pageSize;
         
         // Show content, hide loading
-        pageLoading?.classList.add('hidden');
-        pageContent?.classList.remove('hidden');
-        loading?.classList.add('hidden');
+        if (!silent) {
+            pageLoading?.classList.add('hidden');
+            pageContent?.classList.remove('hidden');
+            loading?.classList.add('hidden');
+        }
 
     } catch (error) {
         console.error('خطأ في تحميل الأسهم:', error);
-        tableBody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-500">فشل تحميل الأسهم: ${error.message}</td></tr>`;
-        pageLoading?.classList.add('hidden');
-        pageContent?.classList.remove('hidden');
-        loading?.classList.add('hidden');
+        if (!silent) {
+            tableBody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-500">فشل تحميل الأسهم: ${error.message}</td></tr>`;
+            pageLoading?.classList.add('hidden');
+            pageContent?.classList.remove('hidden');
+            loading?.classList.add('hidden');
+        }
     }
 }
 
@@ -672,7 +814,10 @@ async function performSearch() {
                                     <td class="px-4 py-3 text-gray-500">${stock.sector || '-'}</td>
                                     <td class="px-4 py-3">${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}</td>
                                     <td class="px-4 py-3">
-                                        <button class="text-blue-600 hover:text-blue-800 text-sm font-medium">عرض</button>
+                                        <button class="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                            onclick="event.stopPropagation(); showStockDetail('${stock.ticker}')">عرض</button>
+                                        <button class="mr-2 text-emerald-600 hover:text-emerald-800 text-sm font-medium"
+                                            onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">متابعة</button>
                                     </td>
                                 </tr>
                             `).join('')}
@@ -700,7 +845,8 @@ async function performSearch() {
 }
 
 // ==================== ا�أس�!�& ا�ح�ا� ====================
-async function loadHalalStocks() {
+async function loadHalalStocks(options = {}) {
+    const { silent = false } = options;
     const pageLoading = document.getElementById('halalPageLoading');
     const pageContent = document.getElementById('halalPageContent');
     const loading = document.getElementById('halalLoading');
@@ -708,8 +854,10 @@ async function loadHalalStocks() {
 
     try {
         // Show page loading indicator
-        pageLoading?.classList.remove('hidden');
-        pageContent?.classList.add('hidden');
+        if (!silent) {
+            pageLoading?.classList.remove('hidden');
+            pageContent?.classList.add('hidden');
+        }
 
         const response = await apiService.getHalalStocks();
 
@@ -720,7 +868,15 @@ async function loadHalalStocks() {
                     <td class="px-4 py-3 text-gray-900">${stock.name || '-'}</td>
                     <td class="px-4 py-3 font-medium">${stock.current_price ? formatCurrency(stock.current_price) : '-'}</td>
                     <td class="px-4 py-3 text-gray-500">${stock.sector || '-'}</td>
-                    <td class="px-4 py-3 text-sm text-gray-600">${stock.compliance_note || 'متوافق مع الشريعة'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-600">
+                        <div class="flex items-center gap-2">
+                            <span>${stock.compliance_note || 'متوافق مع الشريعة'}</span>
+                            <button class="px-2 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                                onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
+                                متابعة
+                            </button>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
         } else {
@@ -728,14 +884,18 @@ async function loadHalalStocks() {
         }
         
         // Show content, hide loading
-        pageLoading?.classList.add('hidden');
-        pageContent?.classList.remove('hidden');
+        if (!silent) {
+            pageLoading?.classList.add('hidden');
+            pageContent?.classList.remove('hidden');
+        }
 
     } catch (error) {
         console.error('خطأ في تحميل الأسهم الحلال:', error);
-        tableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">فشل التحميل: ${error.message}</td></tr>`;
-        pageLoading?.classList.add('hidden');
-        pageContent?.classList.remove('hidden');
+        if (!silent) {
+            tableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">فشل التحميل: ${error.message}</td></tr>`;
+            pageLoading?.classList.add('hidden');
+            pageContent?.classList.remove('hidden');
+        }
     }
 }
 
@@ -1491,12 +1651,15 @@ let newsData = {
     global: []
 };
 
-async function loadNewsPage() {
+async function loadNewsPage(options = {}) {
+    const { silent = false } = options;
     const loadingEl = document.getElementById('newsLoading');
     const contentEl = document.getElementById('newsContent');
     
-    loadingEl?.classList.remove('hidden');
-    contentEl?.classList.add('hidden');
+    if (!silent) {
+        loadingEl?.classList.remove('hidden');
+        contentEl?.classList.add('hidden');
+    }
     
     try {
         // تح�&�`� ج�&�`ع ا�ب�`ا� ات
@@ -1522,23 +1685,29 @@ async function loadNewsPage() {
         // عرض ا�أخبار ا�افتراض�`ة
         renderNewsList(currentNewsCategory);
         
-        loadingEl?.classList.add('hidden');
-        contentEl?.classList.remove('hidden');
+        if (!silent) {
+            loadingEl?.classList.add('hidden');
+            contentEl?.classList.remove('hidden');
+        }
         
     } catch (error) {
         console.error('خطأ في تحميل الأخبار:', error);
-        loadingEl?.classList.add('hidden');
-        contentEl?.classList.remove('hidden');
+        if (!silent) {
+            loadingEl?.classList.add('hidden');
+            contentEl?.classList.remove('hidden');
+        }
         
         // عرض رسا�ة خطأ
-        const newsList = document.getElementById('newsList');
-        if (newsList) {
-            newsList.innerHTML = `
-                <div class="text-center py-8">
-                    <i class="fas fa-exclamation-circle text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">فشل تحميل الأخبار. يرجى المحاولة مرة أخرى.</p>
-                </div>
-            `;
+        if (!silent) {
+            const newsList = document.getElementById('newsList');
+            if (newsList) {
+                newsList.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-exclamation-circle text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500">فشل تحميل الأخبار. يرجى المحاولة مرة أخرى.</p>
+                    </div>
+                `;
+            }
         }
     }
 }
@@ -2102,17 +2271,17 @@ async function loadSubscriptionPage() {
     const FALLBACK_PLANS = [
         {
             id: 'free', name: 'مجاني', description: 'الوصول الأساسي لبيانات البورصة',
-            price_monthly: 0, price_yearly: 0,
+            price_monthly: 0, price_yearly: 0, original_yearly: 0, yearly_discount_pct: 0,
             features: ['عرض أسعار الأسهم الأساسية', 'مؤشرات السوق الرئيسية', 'قائمة مراقبة (حتى 5 أسهم)', 'فحص الامتثال الشرعي']
         },
         {
             id: 'pro', name: 'احترافي', description: 'للمستثمر الجاد',
-            price_monthly: 99, price_yearly: 990,
+            price_monthly: 99, price_yearly: 790, original_yearly: 1188, yearly_discount_pct: 33,
             features: ['كل ميزات الخطة المجانية', 'تحليل متعمق بالذكاء الاصطناعي', 'قائمة مراقبة غير محدودة', 'توصيات استثمارية ذكية', 'تنبيهات الأسعار الفورية', 'بيانات تاريخية كاملة', 'محافظ متعددة']
         },
         {
             id: 'premium', name: 'بريميوم', description: 'للمحترفين والمؤسسات',
-            price_monthly: 199, price_yearly: 1990,
+            price_monthly: 199, price_yearly: 1490, original_yearly: 2388, yearly_discount_pct: 38,
             features: ['كل ميزات الخطة الاحترافية', 'تحليل AI بلا حدود', 'تقارير متقدمة قابلة للتصدير', 'API مباشر للبيانات', 'دعم ذو أولوية', 'وصول مبكر للميزات الجديدة']
         }
     ];
@@ -2146,30 +2315,49 @@ async function loadSubscriptionPage() {
             ).join('');
 
             const highlight = plan.id === 'pro'
-                ? 'ring-2 ring-blue-500 shadow-lg scale-105' : '';
+                ? 'ring-2 ring-blue-500 shadow-xl scale-105' : '';
             const badgeHtml = plan.id === 'pro'
-                ? '<span class="absolute -top-3 right-1/2 translate-x-1/2 bg-blue-500 text-white text-xs px-3 py-1 rounded-full">الأكثر شيوعًا</span>'
+                ? '<span class="absolute -top-3 right-1/2 translate-x-1/2 bg-blue-500 text-white text-xs px-3 py-1 rounded-full font-bold">الأكثر شيوعًا</span>'
                 : '';
+
+            // Discount badge for yearly view
+            const discountBadge = isYearly && plan.yearly_discount_pct > 0
+                ? `<span class="inline-block bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full mb-2">وفر ${plan.yearly_discount_pct}%</span>`
+                : '';
+
+            // Price block — show strikethrough original price when yearly
+            let priceBlock;
+            if (price === 0) {
+                priceBlock = '<span class="text-3xl font-bold text-gray-900">مجاني</span>';
+            } else if (isYearly && plan.original_yearly && plan.original_yearly !== price) {
+                priceBlock = `
+                    <div class="flex items-baseline gap-2 flex-wrap">
+                        <span class="text-3xl font-bold text-gray-900">${price} ج.م</span>
+                        <span class="text-sm text-gray-400 line-through">${plan.original_yearly} ج.م</span>
+                    </div>
+                    <span class="text-sm text-gray-500">/ سنة</span>
+                    <p class="text-xs text-green-600 font-medium mt-1">يعادل ${Math.round(price/12)} ج.م / شهر</p>`;
+            } else {
+                priceBlock = `<span class="text-3xl font-bold text-gray-900">${price} ج.م</span>
+                              <span class="text-sm text-gray-500"> / ${period}</span>`;
+            }
 
             const btnLabel = isCurrent ? 'خطتك الحالية'
                 : isFree ? 'البدء مجانًا'
                 : 'اشترك الآن';
             const btnClass = isCurrent
-                ? 'w-full py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-500 cursor-default'
-                : 'w-full py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-colors';
+                ? 'w-full py-2.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-500 cursor-default'
+                : plan.id === 'pro'
+                    ? 'w-full py-2.5 rounded-lg text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer transition-colors shadow-md'
+                    : 'w-full py-2.5 rounded-lg text-sm font-medium bg-gray-800 hover:bg-gray-900 text-white cursor-pointer transition-colors';
 
             return `
             <div class="relative bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col ${highlight}">
                 ${badgeHtml}
                 <h4 class="text-lg font-bold text-gray-900 mb-1">${plan.name}</h4>
-                <p class="text-sm text-gray-500 mb-4">${plan.description}</p>
-                <div class="mb-6">
-                    ${price === 0
-                        ? '<span class="text-3xl font-bold text-gray-900">مجاني</span>'
-                        : `<span class="text-3xl font-bold text-gray-900">${price} ج.م</span>
-                           <span class="text-sm text-gray-500"> / ${period}</span>`
-                    }
-                </div>
+                <p class="text-sm text-gray-500 mb-3">${plan.description}</p>
+                ${discountBadge}
+                <div class="mb-5">${priceBlock}</div>
                 <ul class="space-y-2 mb-6 flex-1">${featuresHtml}</ul>
                 <button class="${btnClass}" ${isCurrent ? 'disabled' : ''}
                     data-plan="${planKey}" onclick="startPayment('${planKey}')">

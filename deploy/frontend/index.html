@@ -1,0 +1,2442 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة استثمار EGX الذكية</title>
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <!-- Tailwind CSS (local build) -->
+    <link rel="stylesheet" href="/static/css/tailwind.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- ApexCharts for candlestick charts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        #stockModal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            padding: 16px;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+
+        #stockModal.active {
+            display: flex;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        #stockModalPanel {
+            width: min(1120px, 96vw);
+            min-width: min(360px, 96vw);
+            height: 92vh;
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            border-radius: 12px;
+            background: var(--surface-2, #ffffff);
+            overflow: hidden;
+        }
+
+        #modalBody {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar {
+                width: 17rem;
+                transform: translateX(100%);
+                transition: transform 0.25s ease;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            }
+
+            #sidebar.mobile-open {
+                transform: translateX(0);
+            }
+
+            #sidebarBackdrop {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.35);
+                z-index: 45;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.2s ease;
+            }
+
+            #sidebarBackdrop.active {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .mobile-menu-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 2.25rem;
+                height: 2.25rem;
+                border: 1px solid var(--surface-border, #d1d5db);
+                border-radius: 0.5rem;
+                background: var(--surface-2, #fff);
+                color: var(--text-main, #374151);
+            }
+
+            main {
+                margin-right: 0 !important;
+                width: 100%;
+            }
+
+            header {
+                padding: 0.75rem 1rem;
+            }
+
+            #contentArea {
+                padding: 0.75rem;
+            }
+
+            #stockModal {
+                padding: 0 !important;
+                align-items: stretch !important;
+                justify-content: stretch !important;
+            }
+
+            #stockModalPanel {
+                width: 100% !important;
+                max-width: none !important;
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                border-radius: 0 !important;
+                margin: 0 !important;
+                transform: none !important;
+            }
+
+            #modalBody .grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
+    <script>
+        (() => {
+            const savedTheme = localStorage.getItem('theme');
+            const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const useDark = savedTheme ? savedTheme === 'dark' : systemDark;
+            if (useDark) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+</head>
+
+<body class="app-shell bg-gray-100 min-h-screen font-cairo">
+    <div class="flex min-h-screen">
+        <!-- الشريط الجانبي -->
+        <aside class="w-64 bg-white border-l border-gray-200 fixed h-full z-50 flex flex-col right-0" id="sidebar">
+            <!-- الشعار -->
+            <div class="p-5 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <img src="/static/images/brand-logo.svg" alt="EGX Investment Logo" class="w-10 h-10 rounded-xl shadow-sm">
+                    <div>
+                        <h1 class="text-lg font-semibold text-gray-900">استثمار EGX</h1>
+                        <span class="text-xs text-gray-500">البورصة المصرية</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- التنقل -->
+            <nav class="flex-1 p-4 overflow-y-auto">
+                <div class="mb-6">
+                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">الرئيسية</div>
+                    <div class="nav-item active flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-white bg-blue-600"
+                        data-page="dashboard">
+                        <i class="fas fa-home w-5 text-center"></i>
+                        <span class="text-sm font-medium">لوحة التحكم</span>
+                    </div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="market">
+                        <i class="fas fa-globe w-5 text-center"></i>
+                        <span class="text-sm font-medium">نظرة عامة على السوق</span>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">الأسهم</div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="stocks">
+                        <i class="fas fa-list w-5 text-center"></i>
+                        <span class="text-sm font-medium">جميع الأسهم</span>
+                    </div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="search">
+                        <i class="fas fa-search w-5 text-center"></i>
+                        <span class="text-sm font-medium">البحث</span>
+                    </div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="halal">
+                        <i class="fas fa-check-circle w-5 text-center"></i>
+                        <span class="text-sm font-medium">الأسهم الحلال</span>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">المحفظة</div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="recommendations">
+                        <i class="fas fa-lightbulb w-5 text-center"></i>
+                        <span class="text-sm font-medium">توصيات الاستثمار</span>
+                    </div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="watchlist">
+                        <i class="fas fa-eye w-5 text-center"></i>
+                        <span class="text-sm font-medium">قائمة المراقبة</span>
+                    </div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="portfolio">
+                        <i class="fas fa-wallet w-5 text-center"></i>
+                        <span class="text-sm font-medium">محفظتي</span>
+                    </div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="income-expense">
+                        <i class="fas fa-calculator w-5 text-center"></i>
+                        <span class="text-sm font-medium">الدخل والمصروفات</span>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">التعلم</div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="learning">
+                        <i class="fas fa-graduation-cap w-5 text-center"></i>
+                        <span class="text-sm font-medium">مركز التعلم</span>
+                    </div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="news">
+                        <i class="fas fa-newspaper w-5 text-center"></i>
+                        <span class="text-sm font-medium">أخبار الاستثمار</span>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">الحساب</div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="alerts">
+                        <i class="fas fa-bell w-5 text-center"></i>
+                        <span class="text-sm font-medium">التنبيهات المجدولة</span>
+                    </div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200"
+                        data-page="subscription">
+                        <i class="fas fa-crown w-5 text-center text-yellow-500"></i>
+                        <span class="text-sm font-bold">الاشتراك</span>
+                    </div>
+                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
+                        data-page="settings">
+                        <i class="fas fa-cog w-5 text-center"></i>
+                        <span class="text-sm font-medium">الإعدادات</span>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="p-4 border-t border-gray-200">
+                <p class="text-xs text-gray-500 text-center">إدارة مفتاح API من صفحة الإعدادات</p>
+            </div>
+        </aside>
+
+        <div id="sidebarBackdrop"></div>
+
+        <!-- المحتوى الرئيسي -->
+        <main class="flex-1 mr-64">
+            <!-- الهيدر -->
+            <header class="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-40">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" aria-label="فتح القائمة">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <h2 class="text-xl font-semibold text-gray-900" id="pageTitle">لوحة التحكم</h2>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <button id="themeToggle" type="button"
+                            class="theme-toggle-btn flex items-center gap-2 px-3 py-2 rounded-lg text-sm">
+                            <i class="fas fa-moon"></i>
+                            <span>الوضع</span>
+                        </button>
+                        <div class="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg text-sm" id="marketStatus">
+                            <span class="status-dot w-2 h-2 rounded-full bg-red-500"></span>
+                            <span class="status-text">جاري التحقق...</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- منطقة المحتوى -->
+            <div class="p-6" id="contentArea">
+
+                <!-- صفحة لوحة التحكم -->
+                <div class="page" id="dashboardPage">
+                    <!-- مؤشر تحميل لوحة التحكم -->
+                    <div id="dashboardLoading" class="flex flex-col items-center justify-center py-20">
+                        <div class="w-16 h-16 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                        <p class="text-gray-500 text-sm">جاري تحميل البيانات...</p>
+                    </div>
+                    <!-- محتوى لوحة التحكم -->
+                    <div id="dashboardContent" class="hidden">
+                    <!-- بطاقات الإحصائيات -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 flex items-start gap-4">
+                            <div
+                                class="w-12 h-12 rounded-lg flex items-center justify-center text-xl bg-blue-100 text-blue-600">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-500 mb-1">إجمالي الأسهم</h4>
+                                <div class="text-2xl font-semibold text-gray-900" id="totalStocks">-</div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 flex items-start gap-4">
+                            <div
+                                class="w-12 h-12 rounded-lg flex items-center justify-center text-xl bg-green-100 text-green-600">
+                                <i class="fas fa-arrow-trend-up"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-500 mb-1">الأسهم الرابحة</h4>
+                                <div class="text-2xl font-semibold text-gray-900" id="gainingStocks">-</div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 flex items-start gap-4">
+                            <div
+                                class="w-12 h-12 rounded-lg flex items-center justify-center text-xl bg-red-100 text-red-600">
+                                <i class="fas fa-arrow-trend-down"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-500 mb-1">الأسهم الخاسرة</h4>
+                                <div class="text-2xl font-semibold text-gray-900" id="losingStocks">-</div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 flex items-start gap-4">
+                            <div
+                                class="w-12 h-12 rounded-lg flex items-center justify-center text-xl bg-yellow-100 text-yellow-600">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-500 mb-1">مؤشر EGX30</h4>
+                                <div class="text-2xl font-semibold text-gray-900" id="egx30Value">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- أعلى الرابحين -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="font-semibold text-gray-900"><i
+                                    class="fas fa-arrow-trend-up text-green-500 ml-2"></i>أعلى الرابحين</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full" id="gainersTable">
+                                <thead>
+                                    <tr class="bg-gray-50 text-right">
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الرمز</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">التغير</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الامتثال
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- أعلى الخاسرين -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="font-semibold text-gray-900"><i
+                                    class="fas fa-arrow-trend-down text-red-500 ml-2"></i>أعلى الخاسرين</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full" id="losersTable">
+                                <thead>
+                                    <tr class="bg-gray-50 text-right">
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الرمز</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">التغير</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الامتثال
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- صفحة السوق -->
+                <div class="page hidden" id="marketPage">
+                    <!-- مؤشر تحميل صفحة السوق -->
+                    <div id="marketLoading" class="flex flex-col items-center justify-center py-20">
+                        <div class="w-16 h-16 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                        <p class="text-gray-500 text-sm">جاري تحميل بيانات السوق...</p>
+                    </div>
+                    <!-- محتوى صفحة السوق -->
+                    <div id="marketContent" class="hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6" id="indicesGrid">
+                        <!-- سيتم تحميل المؤشرات هنا -->
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="font-semibold text-gray-900"><i
+                                    class="fas fa-chart-bar text-blue-500 ml-2"></i>الأكثر تداولاً</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full" id="activeTable">
+                                <thead>
+                                    <tr class="bg-gray-50 text-right">
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الرمز</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الحجم</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الامتثال
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- صفحة الأسهم -->
+                <div class="page hidden" id="stocksPage">
+                    <!-- مؤشر تحميل صفحة الأسهم -->
+                    <div id="stocksPageLoading" class="flex flex-col items-center justify-center py-20">
+                        <div class="w-16 h-16 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                        <p class="text-gray-500 text-sm">جاري تحميل الأسهم...</p>
+                    </div>
+                    <!-- محتوى صفحة الأسهم -->
+                    <div id="stocksPageContent" class="hidden">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-900">جميع الأسهم</h3>
+                                                            <select id="indexFilter"
+                                                                class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                                                                <option value="">جميع المؤشرات</option>
+                                                                <option value="egx30">EGX 30</option>
+                                                                <option value="egx70">EGX 70</option>
+                                                                <option value="egx100">EGX 100</option>
+                                                            </select>
+                            <div class="flex items-center gap-4">
+                                <select id="sectorFilter"
+                                    class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                                    <option value="">جميع القطاعات</option>
+                                </select>
+                                <label class="flex items-center gap-2 text-sm text-gray-600">
+                                    <input type="checkbox" id="halalOnlyFilter" class="rounded">
+                                    حلال فقط
+                                </label>
+                            </div>
+                        </div>
+                        <div class="hidden flex items-center justify-center py-12" id="stocksLoading">
+                            <div class="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full" id="stocksTable">
+                                <thead>
+                                    <tr class="bg-gray-50 text-right">
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الرمز</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">التغير</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">القطاع</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الامتثال
+                                        </th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                            <span class="text-sm text-gray-500" id="stocksInfo">عرض 0 سهم</span>
+                            <div class="flex gap-2">
+                                <button id="prevPage"
+                                    class="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                                    disabled>السابق</button>
+                                <button id="nextPage"
+                                    class="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50">التالي</button>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- صفحة البحث -->
+                <div class="page hidden" id="searchPage">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="font-semibold text-gray-900">البحث عن الأسهم</h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="md:col-span-2">
+                                    <input type="text" id="searchQuery" placeholder="أدخل رمز السهم أو اسم الشركة..."
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-right">
+                                </div>
+                                <div>
+                                    <select id="searchSectorFilter"
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                        <option value="">جميع القطاعات</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <button id="searchBtn"
+                                        class="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                                        <i class="fas fa-search ml-2"></i>بحث
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                                <div>
+                                    <label class="text-sm text-gray-500 block mb-1">الحد الأدنى للسعر</label>
+                                    <input type="number" id="minPrice" placeholder="0"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-right">
+                                </div>
+                                <div>
+                                    <label class="text-sm text-gray-500 block mb-1">الحد الأقصى للسعر</label>
+                                    <input type="number" id="maxPrice" placeholder="1000"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-right">
+                                </div>
+                                <div class="flex items-end">
+                                    <label class="flex items-center gap-2 text-sm text-gray-600">
+                                        <input type="checkbox" id="searchHalalOnly" class="rounded">
+                                        حلال فقط
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div class="p-6">
+                            <div class="hidden flex items-center justify-center py-12" id="searchLoading">
+                                <div
+                                    class="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin">
+                                </div>
+                            </div>
+                            <div id="searchResults">
+                                <div class="text-center py-12">
+                                    <i class="fas fa-search text-5xl text-gray-300 mb-4"></i>
+                                    <h3 class="text-lg font-medium text-gray-600 mb-2">ابحث عن الأسهم</h3>
+                                    <p class="text-gray-400">أدخل رمز السهم أو اسم الشركة للبحث</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- صفحة الأسهم الحلال -->
+                <div class="page hidden" id="halalPage">
+                    <!-- مؤشر تحميل الأسهم الحلال -->
+                    <div id="halalPageLoading" class="flex flex-col items-center justify-center py-20">
+                        <div class="w-16 h-16 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                        <p class="text-gray-500 text-sm">جاري تحميل الأسهم الحلال...</p>
+                    </div>
+                    <!-- محتوى الأسهم الحلال -->
+                    <div id="halalPageContent" class="hidden">
+                    <div
+                        class="flex items-start gap-3 p-4 mb-6 rounded-lg border bg-green-50 border-green-200 text-green-700">
+                        <i class="fas fa-info-circle mt-0.5"></i>
+                        <div>
+                            <strong class="block">الأسهم المتوافقة مع الشريعة</strong>
+                            <p class="text-sm">هذه الأسهم تعتبر حلال وفقاً لمؤشر EGX 33 للامتثال الشرعي. يرجى استشارة
+                                عالم دين مؤهل لقرارات الاستثمار الشخصية.</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="font-semibold text-gray-900"><i
+                                    class="fas fa-check-circle text-green-500 ml-2"></i>قائمة الأسهم الحلال</h3>
+                        </div>
+                        <div class="hidden flex items-center justify-center py-12" id="halalLoading">
+                            <div class="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full" id="halalTable">
+                                <thead>
+                                    <tr class="bg-gray-50 text-right">
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الرمز</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">القطاع</th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">ملاحظة
+                                            الامتثال</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- صفحة التوصيات -->
+                <div class="page hidden" id="recommendationsPage">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="font-semibold text-gray-900"><i
+                                    class="fas fa-lightbulb text-yellow-500 ml-2"></i>توصيات المحفظة</h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label class="text-sm text-gray-500 block mb-1">رأس المال (جنيه)</label>
+                                    <input type="number" id="capitalInput" value="100000" min="1000"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-right">
+                                </div>
+                                <div>
+                                    <label class="text-sm text-gray-500 block mb-1">تحمل المخاطر</label>
+                                    <select id="riskSelect"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                        <option value="low">مخاطر منخفضة</option>
+                                        <option value="medium" selected>مخاطر متوسطة</option>
+                                        <option value="high">مخاطر عالية</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-sm text-gray-500 block mb-1">الحد الأقصى للأسهم</label>
+                                    <input type="number" id="maxStocksInput" value="10" min="1" max="20"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-right">
+                                </div>
+                                <div>
+                                    <label class="text-sm text-gray-500 block mb-1">القطاعات المفضلة</label>
+                                    <input type="text" id="sectorsInput" placeholder="مثال: البنوك، العقارات"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-right">
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between mt-4">
+                                <label class="flex items-center gap-2 text-sm text-gray-600">
+                                    <input type="checkbox" id="recommendHalalOnly" checked class="rounded">
+                                    حلال فقط
+                                </label>
+                                <button id="getRecommendationsBtn"
+                                    class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                                    <i class="fas fa-magic ml-2"></i>احصل على التوصيات
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="recommendationsResult"></div>
+                </div>
+
+                <!-- صفحة مركز التعلم -->
+                <div class="page hidden" id="learningPage">
+                    <!-- عنوان الصفحة مع نظام XP والرتب -->
+                    <div class="bg-gradient-to-l from-blue-600 via-purple-600 to-indigo-700 rounded-xl p-6 mb-6 text-white">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center text-3xl" id="userRankIcon">
+                                    🌱
+                                </div>
+                                <div>
+                                    <h2 class="text-2xl font-bold">مركز تعلم الاستثمار المتقدم</h2>
+                                    <p class="text-blue-100 mt-1">تعلم أساسيات الاستثمار وتطوير مهاراتك مع نظام الشارات والإنجازات</p>
+                                </div>
+                            </div>
+                            <div class="text-left">
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-white/20 px-3 py-1 rounded-full text-sm" id="userRankName">مبتدئ</span>
+                                    <span class="bg-yellow-500/30 px-3 py-1 rounded-full text-sm font-bold" id="userXP">0 XP</span>
+                                </div>
+                                <div class="mt-2 w-40">
+                                    <div class="text-xs text-white/70 mb-1">التقدم للمستوى التالي</div>
+                                    <div class="h-2 bg-white/20 rounded-full overflow-hidden">
+                                        <div class="h-full bg-yellow-400 rounded-full transition-all" id="xpProgressBar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- تقدم التعلم مع إنجازات إضافية -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-gray-900">تقدمك في التعلم</h3>
+                            <span class="text-sm text-gray-500" id="learningProgressText">0% مكتمل</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div class="bg-gradient-to-l from-blue-600 to-indigo-600 h-3 rounded-full transition-all duration-500" id="learningProgressBar" style="width: 0%"></div>
+                        </div>
+                        <div class="grid grid-cols-5 gap-4 mt-4 text-center">
+                            <div class="p-3 bg-gray-50 rounded-lg">
+                                <div class="text-2xl font-bold text-blue-600" id="completedLessons">0</div>
+                                <div class="text-xs text-gray-500">دروس مكتملة</div>
+                            </div>
+                            <div class="p-3 bg-gray-50 rounded-lg">
+                                <div class="text-2xl font-bold text-green-600" id="quizScore">0%</div>
+                                <div class="text-xs text-gray-500">متوسط الاختبارات</div>
+                            </div>
+                            <div class="p-3 bg-gray-50 rounded-lg">
+                                <div class="text-2xl font-bold text-purple-600" id="simulationCount">0</div>
+                                <div class="text-xs text-gray-500">محاكاة منجزة</div>
+                            </div>
+                            <div class="p-3 bg-gray-50 rounded-lg">
+                                <div class="text-2xl font-bold text-orange-600" id="streakDays">0</div>
+                                <div class="text-xs text-gray-500">أيام متتالية 🔥</div>
+                            </div>
+                            <div class="p-3 bg-gray-50 rounded-lg">
+                                <div class="text-2xl font-bold text-yellow-600" id="badgesCount">0</div>
+                                <div class="text-xs text-gray-500">شارات مكتسبة</div>
+                            </div>
+                        </div>
+                        
+                        <!-- شارات الإنجازات -->
+                        <div class="mt-4 pt-4 border-t border-gray-100">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-sm font-medium text-gray-700">آخر الإنجازات</span>
+                                <button class="text-sm text-blue-600 hover:text-blue-700" onclick="showAllAchievements()">عرض الكل</button>
+                            </div>
+                            <div class="flex gap-2" id="recentBadges">
+                                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 text-lg">?</div>
+                                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 text-lg">?</div>
+                                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 text-lg">?</div>
+                                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 text-lg">?</div>
+                                <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 text-lg">?</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- تبويبات التعلم المتقدمة -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div class="border-b border-gray-200">
+                            <nav class="flex gap-0 overflow-x-auto" id="learningTabs">
+                                <button class="learning-tab active px-5 py-4 text-sm font-medium border-b-2 border-blue-600 text-blue-600 whitespace-nowrap" data-tab="courses">
+                                    <i class="fas fa-graduation-cap ml-2"></i>الدورات التعليمية
+                                </button>
+                                <button class="learning-tab px-5 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-tab="lessons">
+                                    <i class="fas fa-book-open ml-2"></i>الدروس
+                                </button>
+                                <button class="learning-tab px-5 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-tab="live-simulation">
+                                    <i class="fas fa-chart-line ml-2"></i>المحاكاة الحية
+                                </button>
+                                <button class="learning-tab px-5 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-tab="patterns">
+                                    <i class="fas fa-candlestick-chart ml-2"></i>مدرب الأنماط
+                                </button>
+                                <button class="learning-tab px-5 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-tab="charts">
+                                    <i class="fas fa-chart-area ml-2"></i>الرسوم البيانية
+                                </button>
+                                <button class="learning-tab px-5 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-tab="simulations">
+                                    <i class="fas fa-flask ml-2"></i>المحاكاة
+                                </button>
+                                <button class="learning-tab px-5 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-tab="calculators">
+                                    <i class="fas fa-calculator ml-2"></i>الحاسبات
+                                </button>
+                                <button class="learning-tab px-5 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-tab="quiz">
+                                    <i class="fas fa-question-circle ml-2"></i>اختبر معلوماتك
+                                </button>
+                                <button class="learning-tab px-5 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-tab="achievements">
+                                    <i class="fas fa-trophy ml-2"></i>الإنجازات
+                                </button>
+                            </nav>
+                        </div>
+                        
+                        <!-- محتوى الدورات التعليمية الجديد -->
+                        <div class="p-6 hidden" id="coursesContent">
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">مسار التعلم الشامل</h3>
+                                <p class="text-gray-500">اختر دورة تناسب مستواك وابدأ رحلة التعلم</p>
+                            </div>
+                            
+                            <!-- مسار الدورات -->
+                            <div class="flex items-center justify-center gap-4 mb-8 overflow-x-auto pb-4">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center text-3xl border-4 border-green-500">🌱</div>
+                                    <div class="mt-2 text-center">
+                                        <div class="font-bold text-green-700">مبتدئ</div>
+                                        <div class="text-xs text-gray-500">10 ساعات</div>
+                                    </div>
+                                </div>
+                                <div class="w-12 h-1 bg-gray-300"></div>
+                                <div class="flex flex-col items-center">
+                                    <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center text-3xl border-4 border-blue-500">📈</div>
+                                    <div class="mt-2 text-center">
+                                        <div class="font-bold text-blue-700">متوسط</div>
+                                        <div class="text-xs text-gray-500">20 ساعة</div>
+                                    </div>
+                                </div>
+                                <div class="w-12 h-1 bg-gray-300"></div>
+                                <div class="flex flex-col items-center">
+                                    <div class="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center text-3xl border-4 border-purple-500">🎓</div>
+                                    <div class="mt-2 text-center">
+                                        <div class="font-bold text-purple-700">متقدم</div>
+                                        <div class="text-xs text-gray-500">30 ساعة</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- بطاقات الدورات -->
+                            <div class="grid md:grid-cols-3 gap-6">
+                                <!-- دورة المبتدئين -->
+                                <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl overflow-hidden border border-green-200 hover:shadow-lg transition-shadow cursor-pointer course-card" data-course="beginner">
+                                    <div class="bg-green-600 text-white p-4">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-3xl">🌱</span>
+                                            <span class="bg-white/20 px-2 py-1 rounded text-sm">500 XP</span>
+                                        </div>
+                                        <h4 class="text-xl font-bold mt-2">أساسيات الاستثمار</h4>
+                                        <p class="text-green-100 text-sm mt-1">تعلم من الصفر</p>
+                                    </div>
+                                    <div class="p-4">
+                                        <div class="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                                            <i class="fas fa-clock"></i>
+                                            <span>10 ساعات</span>
+                                            <span class="mx-2">•</span>
+                                            <i class="fas fa-book"></i>
+                                            <span>12 درس</span>
+                                        </div>
+                                        <div class="space-y-2 mb-4">
+                                            <div class="flex items-center gap-2 text-sm">
+                                                <i class="fas fa-check-circle text-green-500"></i>
+                                                <span>ما هو الاستثمار؟</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 text-sm">
+                                                <i class="fas fa-check-circle text-green-500"></i>
+                                                <span>أنواع الاستثمارات</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 text-sm">
+                                                <i class="fas fa-check-circle text-green-500"></i>
+                                                <span>أساسيات الأسهم</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <div class="text-sm text-gray-500">
+                                                <span class="font-bold text-green-600">0%</span> مكتمل
+                                            </div>
+                                            <button class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
+                                                ابدأ الدورة
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- دورة المتوسط -->
+                                <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl overflow-hidden border border-blue-200 hover:shadow-lg transition-shadow cursor-pointer course-card" data-course="intermediate">
+                                    <div class="bg-blue-600 text-white p-4">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-3xl">📈</span>
+                                            <span class="bg-white/20 px-2 py-1 rounded text-sm">1000 XP</span>
+                                        </div>
+                                        <h4 class="text-xl font-bold mt-2">التحليل الفني</h4>
+                                        <p class="text-blue-100 text-sm mt-1">إتقان قراءة الرسوم البيانية</p>
+                                    </div>
+                                    <div class="p-4">
+                                        <div class="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                                            <i class="fas fa-clock"></i>
+                                            <span>20 ساعة</span>
+                                            <span class="mx-2">•</span>
+                                            <i class="fas fa-book"></i>
+                                            <span>18 درس</span>
+                                        </div>
+                                        <div class="space-y-2 mb-4">
+                                            <div class="flex items-center gap-2 text-sm">
+                                                <i class="fas fa-check-circle text-blue-500"></i>
+                                                <span>قراءة الرسوم البيانية</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 text-sm">
+                                                <i class="fas fa-check-circle text-blue-500"></i>
+                                                <span>أنماط الشموع اليابانية</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 text-sm">
+                                                <i class="fas fa-check-circle text-blue-500"></i>
+                                                <span>المؤشرات الفنية</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <div class="text-sm text-gray-500">
+                                                <span class="font-bold text-blue-600">0%</span> مكتمل
+                                            </div>
+                                            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">
+                                                ابدأ الدورة
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- دورة المتقدم -->
+                                <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl overflow-hidden border border-purple-200 hover:shadow-lg transition-shadow cursor-pointer course-card" data-course="advanced">
+                                    <div class="bg-purple-600 text-white p-4">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-3xl">🎓</span>
+                                            <span class="bg-white/20 px-2 py-1 rounded text-sm">2000 XP</span>
+                                        </div>
+                                        <h4 class="text-xl font-bold mt-2">استراتيجيات متقدمة</h4>
+                                        <p class="text-purple-100 text-sm mt-1">احتراف إدارة المحافظ</p>
+                                    </div>
+                                    <div class="p-4">
+                                        <div class="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                                            <i class="fas fa-clock"></i>
+                                            <span>30 ساعة</span>
+                                            <span class="mx-2">•</span>
+                                            <i class="fas fa-book"></i>
+                                            <span>15 درس</span>
+                                        </div>
+                                        <div class="space-y-2 mb-4">
+                                            <div class="flex items-center gap-2 text-sm">
+                                                <i class="fas fa-check-circle text-purple-500"></i>
+                                                <span>إدارة المحافظ الاستثمارية</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 text-sm">
+                                                <i class="fas fa-check-circle text-purple-500"></i>
+                                                <span>استراتيجيات التداول</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 text-sm">
+                                                <i class="fas fa-check-circle text-purple-500"></i>
+                                                <span>تحليل المخاطر المتقدم</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <div class="text-sm text-gray-500">
+                                                <span class="font-bold text-purple-600">0%</span> مكتمل
+                                            </div>
+                                            <button class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
+                                                ابدأ الدورة
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- محتوى المحاكاة الحية الجديد -->
+                        <div class="p-6 hidden" id="liveSimulationContent">
+                            <div class="mb-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">محاكاة السوق الحية</h3>
+                                        <p class="text-gray-500 text-sm">تداول بمال افتراضي في ظروف سوق حقيقية</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <select id="marketScenario" class="border rounded-lg px-3 py-2 text-sm">
+                                            <option value="sideways">سوق عرضي</option>
+                                            <option value="bullMarket">سوق صاعد</option>
+                                            <option value="bearMarket">سوق هابط</option>
+                                            <option value="crash">انهيار السوق</option>
+                                            <option value="recovery">التعافي</option>
+                                        </select>
+                                        <button id="startLiveSimBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                            <i class="fas fa-play ml-1"></i>ابدأ المحاكاة
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid lg:grid-cols-3 gap-6">
+                                <!-- منطقة الرسم البياني -->
+                                <div class="lg:col-span-2">
+                                    <div class="bg-gray-900 rounded-xl p-4 text-white">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <div>
+                                                <select id="liveSimStock" class="bg-gray-800 border-gray-700 rounded px-3 py-1 text-sm">
+                                                    <option value="ETEL">ETEL - الاتصالات</option>
+                                                    <option value="COMI">COMI - البنك التجاري</option>
+                                                    <option value="AMOC">AMOC - الموانئ</option>
+                                                    <option value="SWDY">SWDY - السويدي</option>
+                                                </select>
+                                            </div>
+                                            <div class="text-left">
+                                                <div class="text-2xl font-bold" id="livePrice">25.50</div>
+                                                <div class="text-green-400 text-sm" id="liveChange">+0.75 (+3.03%)</div>
+                                            </div>
+                                        </div>
+                                        <div class="h-64 bg-gray-800 rounded-lg flex items-center justify-center" id="liveChartContainer">
+                                            <div class="text-gray-500 text-center">
+                                                <i class="fas fa-chart-candlestick text-4xl mb-2"></i>
+                                                <p>اضغط "ابدأ المحاكاة" لبدء التداول الحي</p>
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-cols-4 gap-2 mt-4 text-center text-sm">
+                                            <div class="bg-gray-800 rounded p-2">
+                                                <div class="text-gray-400">الافتتاح</div>
+                                                <div id="liveOpen">25.00</div>
+                                            </div>
+                                            <div class="bg-gray-800 rounded p-2">
+                                                <div class="text-gray-400">الأعلى</div>
+                                                <div id="liveHigh">26.00</div>
+                                            </div>
+                                            <div class="bg-gray-800 rounded p-2">
+                                                <div class="text-gray-400">الأدنى</div>
+                                                <div id="liveLow">24.50</div>
+                                            </div>
+                                            <div class="bg-gray-800 rounded p-2">
+                                                <div class="text-gray-400">الحجم</div>
+                                                <div id="liveVolume">1.2M</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- المؤشرات الفنية -->
+                                    <div class="bg-white border rounded-xl p-4 mt-4">
+                                        <h4 class="font-bold mb-3">المؤشرات الفنية</h4>
+                                        <div class="grid grid-cols-5 gap-3 text-center">
+                                            <div class="p-2 bg-gray-50 rounded">
+                                                <div class="text-xs text-gray-500">SMA 20</div>
+                                                <div class="font-bold text-sm" id="indSMA20">25.30</div>
+                                            </div>
+                                            <div class="p-2 bg-gray-50 rounded">
+                                                <div class="text-xs text-gray-500">EMA 12</div>
+                                                <div class="font-bold text-sm" id="indEMA12">25.45</div>
+                                            </div>
+                                            <div class="p-2 bg-gray-50 rounded">
+                                                <div class="text-xs text-gray-500">RSI</div>
+                                                <div class="font-bold text-sm text-green-600" id="indRSI2">65.4</div>
+                                            </div>
+                                            <div class="p-2 bg-gray-50 rounded">
+                                                <div class="text-xs text-gray-500">MACD</div>
+                                                <div class="font-bold text-sm text-green-600" id="indMACD2">0.15</div>
+                                            </div>
+                                            <div class="p-2 bg-gray-50 rounded">
+                                                <div class="text-xs text-gray-500">الاتجاه</div>
+                                                <div class="font-bold text-sm text-green-600" id="indTrend2">صعودي ↑</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- لوحة التداول -->
+                                <div class="space-y-4">
+                                    <div class="bg-white border rounded-xl p-4">
+                                        <h4 class="font-bold mb-3">ملخص المحفظة</h4>
+                                        <div class="space-y-3">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500">الرصيد النقدي</span>
+                                                <span class="font-bold" id="liveBalance">100,000 ج.م</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500">قيمة الأسهم</span>
+                                                <span class="font-bold" id="liveStockValue">0 ج.م</span>
+                                            </div>
+                                            <hr>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500 font-medium">الإجمالي</span>
+                                                <span class="font-bold text-lg" id="liveTotalValue">100,000 ج.م</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500">الربح/الخسارة</span>
+                                                <span class="font-bold text-green-600" id="liveProfitLoss">+0 ج.م</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-white border rounded-xl p-4">
+                                        <h4 class="font-bold mb-3">تنفيذ صفقة</h4>
+                                        <div class="space-y-3">
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <button class="py-2 bg-green-100 text-green-700 rounded-lg font-medium border-2 border-green-500" id="buyBtn">شراء</button>
+                                                <button class="py-2 bg-gray-100 text-gray-500 rounded-lg font-medium border-2 border-transparent" id="sellBtn">بيع</button>
+                                            </div>
+                                            <div>
+                                                <label class="text-xs text-gray-500">عدد الأسهم</label>
+                                                <input type="number" id="liveShares" value="100" class="w-full border rounded-lg px-3 py-2 mt-1">
+                                            </div>
+                                            <div class="bg-gray-50 rounded-lg p-3">
+                                                <div class="flex justify-between text-sm">
+                                                    <span>إجمالي الصفقة:</span>
+                                                    <span class="font-bold" id="liveTotalCost">2,550 ج.م</span>
+                                                </div>
+                                            </div>
+                                            <button class="w-full py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700" id="executeLiveTradeBtn">
+                                                تنفيذ الشراء
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-white border rounded-xl p-4">
+                                        <h4 class="font-bold mb-3">ممتلكاتي</h4>
+                                        <div id="liveHoldings" class="space-y-2 max-h-40 overflow-y-auto">
+                                            <div class="text-center py-4 text-gray-400 text-sm">
+                                                محفظتك فارغة
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- محتوى مدرب الأنماط -->
+                        <div class="p-6 hidden" id="patternsContent">
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">مدرب التعرف على أنماط الشموع</h3>
+                                <p class="text-gray-500">تدرب على التعرف على أنماط الشموع اليابانية واكسب نقاط الخبرة</p>
+                            </div>
+                            
+                            <div class="grid lg:grid-cols-3 gap-6">
+                                <div class="lg:col-span-2">
+                                    <div class="bg-white border rounded-xl p-6">
+                                        <div class="flex items-center justify-between mb-4">
+                                            <h4 class="font-bold">النمط الحالي</h4>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-sm text-gray-500">الصعوبة:</span>
+                                                <select id="patternDifficulty" class="border rounded px-2 py-1 text-sm">
+                                                    <option value="beginner">مبتدئ</option>
+                                                    <option value="intermediate">متوسط</option>
+                                                    <option value="advanced">متقدم</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="bg-gray-50 rounded-xl p-8 min-h-64 flex items-center justify-center" id="patternDisplayArea">
+                                            <div class="text-center text-gray-400">
+                                                <i class="fas fa-candlestick-chart text-5xl mb-3"></i>
+                                                <p class="text-lg">اضغط "ابدأ التدريب" للبدء</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-4 flex justify-center gap-4">
+                                            <button class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" id="startPatternTrainingBtn">
+                                                <i class="fas fa-play ml-2"></i>ابدأ التدريب
+                                            </button>
+                                            <button class="px-4 py-2 border rounded-lg hover:bg-gray-50" id="hintBtn">
+                                                <i class="fas fa-lightbulb ml-2"></i>تلميح (-5 نقاط)
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-4">
+                                    <div class="bg-white border rounded-xl p-4">
+                                        <h4 class="font-bold mb-3">إحصائياتك</h4>
+                                        <div class="space-y-3">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500">النقاط</span>
+                                                <span class="font-bold text-green-600" id="patternScore">0</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500">السلسلة</span>
+                                                <span class="font-bold text-orange-500" id="patternStreak">0 🔥</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500">الدقة</span>
+                                                <span class="font-bold text-blue-600" id="patternAccuracy">0%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-white border rounded-xl p-4">
+                                        <h4 class="font-bold mb-3">اختر النمط الصحيح</h4>
+                                        <div class="space-y-2" id="patternOptions">
+                                            <div class="text-center py-4 text-gray-400 text-sm">
+                                                ابدأ التدريب لعرض الخيارات
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- محتوى الإنجازات -->
+                        <div class="p-6 hidden" id="achievementsContent">
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">الإنجازات والشارات</h3>
+                                <p class="text-gray-500">اجمع الشارات وتقدم في الرتب</p>
+                            </div>
+                            
+                            <!-- الرتبة الحالية -->
+                            <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl p-6 text-white mb-6">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-4xl" id="currentRankIcon">🌱</div>
+                                        <div>
+                                            <div class="text-white/80 text-sm">رتبتك الحالية</div>
+                                            <div class="text-2xl font-bold" id="currentRankName">مبتدئ</div>
+                                            <div class="text-white/80" id="currentRankXP">0 نقطة خبرة</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-left">
+                                        <div class="text-white/80 text-sm">الرتبة التالية</div>
+                                        <div class="text-xl font-bold" id="nextRankName">متعلم</div>
+                                        <div class="text-white/80 text-sm" id="nextRankXP">500 XP مطلوب</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- الشارات -->
+                            <div class="bg-white border rounded-xl p-6 mb-6">
+                                <h4 class="font-bold mb-4">الشارات المكتسبة</h4>
+                                <div class="grid grid-cols-2 md:grid-cols-5 gap-4" id="allBadges">
+                                    <!-- شارة الصفقة الأولى -->
+                                    <div class="badge-card p-4 rounded-xl text-center bg-gray-50 opacity-50" data-badge="firstTrade">
+                                        <div class="text-4xl mb-2 grayscale">🎯</div>
+                                        <div class="font-medium text-sm">الصفقة الأولى</div>
+                                        <div class="text-xs text-gray-500">+50 XP</div>
+                                    </div>
+                                    <!-- شارة الربح الأول -->
+                                    <div class="badge-card p-4 rounded-xl text-center bg-gray-50 opacity-50" data-badge="profitableTrade">
+                                        <div class="text-4xl mb-2 grayscale">💰</div>
+                                        <div class="font-medium text-sm">ربح أول</div>
+                                        <div class="text-xs text-gray-500">+100 XP</div>
+                                    </div>
+                                    <!-- شارة التنويع -->
+                                    <div class="badge-card p-4 rounded-xl text-center bg-gray-50 opacity-50" data-badge="diversified">
+                                        <div class="text-4xl mb-2 grayscale">🎨</div>
+                                        <div class="font-medium text-sm">متنوع</div>
+                                        <div class="text-xs text-gray-500">+150 XP</div>
+                                    </div>
+                                    <!-- شارة خبير الاختبارات -->
+                                    <div class="badge-card p-4 rounded-xl text-center bg-gray-50 opacity-50" data-badge="quizMaster">
+                                        <div class="text-4xl mb-2 grayscale">📝</div>
+                                        <div class="font-medium text-sm">خبير الاختبارات</div>
+                                        <div class="text-xs text-gray-500">+200 XP</div>
+                                    </div>
+                                    <!-- شارة الأسبوع المتواصل -->
+                                    <div class="badge-card p-4 rounded-xl text-center bg-gray-50 opacity-50" data-badge="weekStreak">
+                                        <div class="text-4xl mb-2 grayscale">🔥</div>
+                                        <div class="font-medium text-sm">أسبوع متواصل</div>
+                                        <div class="text-xs text-gray-500">+250 XP</div>
+                                    </div>
+                                    <!-- شارة الشهر المتواصل -->
+                                    <div class="badge-card p-4 rounded-xl text-center bg-gray-50 opacity-50" data-badge="monthStreak">
+                                        <div class="text-4xl mb-2 grayscale">🏆</div>
+                                        <div class="font-medium text-sm">شهر متواصل</div>
+                                        <div class="text-xs text-gray-500">+500 XP</div>
+                                    </div>
+                                    <!-- شارة الخريج -->
+                                    <div class="badge-card p-4 rounded-xl text-center bg-gray-50 opacity-50" data-badge="courseComplete">
+                                        <div class="text-4xl mb-2 grayscale">🎓</div>
+                                        <div class="font-medium text-sm">خريج</div>
+                                        <div class="text-xs text-gray-500">+300 XP</div>
+                                    </div>
+                                    <!-- شارة محفظة 100 ألف -->
+                                    <div class="badge-card p-4 rounded-xl text-center bg-gray-50 opacity-50" data-badge="portfolio100k">
+                                        <div class="text-4xl mb-2 grayscale">💎</div>
+                                        <div class="font-medium text-sm">محفظة 100 ألف</div>
+                                        <div class="text-xs text-gray-500">+400 XP</div>
+                                    </div>
+                                    <!-- شارة محفظة 200 ألف -->
+                                    <div class="badge-card p-4 rounded-xl text-center bg-gray-50 opacity-50" data-badge="portfolio200k">
+                                        <div class="text-4xl mb-2 grayscale">👑</div>
+                                        <div class="font-medium text-sm">محفظة 200 ألف</div>
+                                        <div class="text-xs text-gray-500">+800 XP</div>
+                                    </div>
+                                    <!-- شارة خبير الأنماط -->
+                                    <div class="badge-card p-4 rounded-xl text-center bg-gray-50 opacity-50" data-badge="patternExpert">
+                                        <div class="text-4xl mb-2 grayscale">📊</div>
+                                        <div class="font-medium text-sm">خبير الأنماط</div>
+                                        <div class="text-xs text-gray-500">+300 XP</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- جدول الرتب -->
+                            <div class="bg-white border rounded-xl p-6">
+                                <h4 class="font-bold mb-4">جدول الرتب</h4>
+                                <div class="space-y-3">
+                                    <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border-2 border-green-500">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl">🌱</span>
+                                            <span class="font-bold">مبتدئ</span>
+                                        </div>
+                                        <span class="text-sm text-gray-500">0 XP</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl">📚</span>
+                                            <span class="font-medium">متعلم</span>
+                                        </div>
+                                        <span class="text-sm text-gray-500">500 XP</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl">💪</span>
+                                            <span class="font-medium">ممارس</span>
+                                        </div>
+                                        <span class="text-sm text-gray-500">1,500 XP</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl">🚀</span>
+                                            <span class="font-medium">متقدم</span>
+                                        </div>
+                                        <span class="text-sm text-gray-500">3,000 XP</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl">⭐</span>
+                                            <span class="font-medium">خبير</span>
+                                        </div>
+                                        <span class="text-sm text-gray-500">5,000 XP</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl">🏆</span>
+                                            <span class="font-medium">محترف</span>
+                                        </div>
+                                        <span class="text-sm text-gray-500">8,000 XP</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl">👑</span>
+                                            <span class="font-medium">سيد</span>
+                                        </div>
+                                        <span class="text-sm text-gray-500">12,000 XP</span>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl">💎</span>
+                                            <span class="font-medium">أسطورة</span>
+                                        </div>
+                                        <span class="text-sm text-gray-500">20,000 XP</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- محتوى الدروس -->
+                        <div class="p-6" id="lessonsContent">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <!-- درس 1: أساسيات الاستثمار -->
+                                <div class="lesson-card border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" data-lesson="basics">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-seedling text-blue-600 text-xl"></i>
+                                        </div>
+                                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">مبتدئ</span>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 mb-2">أساسيات الاستثمار</h4>
+                                    <p class="text-sm text-gray-500 mb-3">تعلم ما هو الاستثمار ولماذا هو مهم لبناء ثروتك المستقبلية</p>
+                                    <div class="flex items-center justify-between text-xs text-gray-400">
+                                        <span><i class="fas fa-clock ml-1"></i>15 دقيقة</span>
+                                        <span><i class="fas fa-star text-yellow-400 ml-1"></i>4.9</span>
+                                    </div>
+                                    <div class="mt-3 w-full bg-gray-100 rounded-full h-1.5">
+                                        <div class="bg-blue-600 h-1.5 rounded-full lesson-progress" style="width: 0%"></div>
+                                    </div>
+                                </div>
+
+                                <!-- درس 2: أنواع الأسهم -->
+                                <div class="lesson-card border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" data-lesson="stock-types">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-layer-group text-purple-600 text-xl"></i>
+                                        </div>
+                                        <span class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">مبتدئ</span>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 mb-2">أنواع الأسهم</h4>
+                                    <p class="text-sm text-gray-500 mb-3">تعرف على أنواع الأسهم المختلفة وكيفية تصنيفها</p>
+                                    <div class="flex items-center justify-between text-xs text-gray-400">
+                                        <span><i class="fas fa-clock ml-1"></i>20 دقيقة</span>
+                                        <span><i class="fas fa-star text-yellow-400 ml-1"></i>4.8</span>
+                                    </div>
+                                    <div class="mt-3 w-full bg-gray-100 rounded-full h-1.5">
+                                        <div class="bg-purple-600 h-1.5 rounded-full lesson-progress" style="width: 0%"></div>
+                                    </div>
+                                </div>
+
+                                <!-- درس 3: قراءة الرسوم البيانية -->
+                                <div class="lesson-card border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" data-lesson="charts">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-chart-line text-green-600 text-xl"></i>
+                                        </div>
+                                        <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">متوسط</span>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 mb-2">قراءة الرسوم البيانية</h4>
+                                    <p class="text-sm text-gray-500 mb-3">تعلم كيف تقرأ وتفسر الرسوم البيانية للأسهم</p>
+                                    <div class="flex items-center justify-between text-xs text-gray-400">
+                                        <span><i class="fas fa-clock ml-1"></i>25 دقيقة</span>
+                                        <span><i class="fas fa-star text-yellow-400 ml-1"></i>4.9</span>
+                                    </div>
+                                    <div class="mt-3 w-full bg-gray-100 rounded-full h-1.5">
+                                        <div class="bg-green-600 h-1.5 rounded-full lesson-progress" style="width: 0%"></div>
+                                    </div>
+                                </div>
+
+                                <!-- درس 4: الشموع اليابانية -->
+                                <div class="lesson-card border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" data-lesson="candlesticks">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-fire text-orange-600 text-xl"></i>
+                                        </div>
+                                        <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">متوسط</span>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 mb-2">الشموع اليابانية</h4>
+                                    <p class="text-sm text-gray-500 mb-3">فهم أنماط الشموع اليابانية وكيفية استخدامها في التحليل</p>
+                                    <div class="flex items-center justify-between text-xs text-gray-400">
+                                        <span><i class="fas fa-clock ml-1"></i>30 دقيقة</span>
+                                        <span><i class="fas fa-star text-yellow-400 ml-1"></i>4.7</span>
+                                    </div>
+                                    <div class="mt-3 w-full bg-gray-100 rounded-full h-1.5">
+                                        <div class="bg-orange-600 h-1.5 rounded-full lesson-progress" style="width: 0%"></div>
+                                    </div>
+                                </div>
+
+                                <!-- درس 5: إدارة المخاطر -->
+                                <div class="lesson-card border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" data-lesson="risk">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-shield-alt text-red-600 text-xl"></i>
+                                        </div>
+                                        <span class="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">متقدم</span>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 mb-2">إدارة المخاطر</h4>
+                                    <p class="text-sm text-gray-500 mb-3">استراتيجيات إدارة المخاطر وحماية محفظتك</p>
+                                    <div class="flex items-center justify-between text-xs text-gray-400">
+                                        <span><i class="fas fa-clock ml-1"></i>35 دقيقة</span>
+                                        <span><i class="fas fa-star text-yellow-400 ml-1"></i>4.9</span>
+                                    </div>
+                                    <div class="mt-3 w-full bg-gray-100 rounded-full h-1.5">
+                                        <div class="bg-red-600 h-1.5 rounded-full lesson-progress" style="width: 0%"></div>
+                                    </div>
+                                </div>
+
+                                <!-- درس 6: التنويع -->
+                                <div class="lesson-card border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer" data-lesson="diversification">
+                                    <div class="flex items-start justify-between mb-3">
+                                        <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-th-large text-indigo-600 text-xl"></i>
+                                        </div>
+                                        <span class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">متوسط</span>
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900 mb-2">التنويع الاستثماري</h4>
+                                    <p class="text-sm text-gray-500 mb-3">كيف تبني محفظة متنوعة لتقليل المخاطر</p>
+                                    <div class="flex items-center justify-between text-xs text-gray-400">
+                                        <span><i class="fas fa-clock ml-1"></i>25 دقيقة</span>
+                                        <span><i class="fas fa-star text-yellow-400 ml-1"></i>4.8</span>
+                                    </div>
+                                    <div class="mt-3 w-full bg-gray-100 rounded-full h-1.5">
+                                        <div class="bg-indigo-600 h-1.5 rounded-full lesson-progress" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- محتوى الرسوم البيانية -->
+                        <div class="p-6 hidden" id="chartsContent">
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">تعلم الرسوم البيانية تفاعلياً</h3>
+                                <p class="text-gray-500">اضغط على أي رسم لتعلم المزيد عنه</p>
+                            </div>
+                            
+                            <!-- عرض تفاعلي للشموع -->
+                            <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="font-semibold text-gray-900">الشموع اليابانية - شرح تفاعلي</h4>
+                                    <div class="flex gap-2">
+                                        <button id="candleBullishBtn" class="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200">شمعة صاعدة</button>
+                                        <button id="candleBearishBtn" class="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200">شمعة هابطة</button>
+                                        <button id="candleDojiBtn" class="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">دوجي</button>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                                        <div id="candlestickDemo" class="h-64"></div>
+                                    </div>
+                                    <div class="bg-white rounded-lg p-4 border border-gray-200">
+                                        <h5 class="font-medium text-gray-900 mb-3" id="candleTitle">مكونات الشمعة</h5>
+                                        <div id="candleExplanation" class="text-sm text-gray-600 space-y-2">
+                                            <p><strong>الجسم:</strong> المنطقة المستطيلة بين سعر الافتتاح والإغلاق</p>
+                                            <p><strong>الظل العلوي:</strong> الخط الذي يمتد من الجسم إلى أعلى سعر</p>
+                                            <p><strong>الظل السفلي:</strong> الخط الذي يمتد من الجسم إلى أدنى سعر</p>
+                                            <p class="mt-4 p-3 bg-blue-50 rounded-lg"><i class="fas fa-info-circle text-blue-500 ml-2"></i>الشمعة الخضراء تعني أن السعر أغلق أعلى من الافتتاح (صعود)</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- أنماط الشموع -->
+                            <div class="bg-white border border-gray-200 rounded-xl p-6">
+                                <h4 class="font-semibold text-gray-900 mb-4">أنماط الشموع المهمة</h4>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div class="pattern-card text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer" data-pattern="hammer">
+                                        <div class="text-3xl mb-2">🔨</div>
+                                        <div class="font-medium text-gray-900">المطرقة</div>
+                                        <div class="text-xs text-gray-500">نمط انعكاسي صعودي</div>
+                                    </div>
+                                    <div class="pattern-card text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer" data-pattern="engulfing">
+                                        <div class="text-3xl mb-2">📊</div>
+                                        <div class="font-medium text-gray-900">الابتلاع</div>
+                                        <div class="text-xs text-gray-500">إشارة قوية للانعكاس</div>
+                                    </div>
+                                    <div class="pattern-card text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer" data-pattern="morningstar">
+                                        <div class="text-3xl mb-2">⭐</div>
+                                        <div class="font-medium text-gray-900">نجمة الصبح</div>
+                                        <div class="text-xs text-gray-500">نمط انعكاسي صعودي</div>
+                                    </div>
+                                    <div class="pattern-card text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer" data-pattern="threewhite">
+                                        <div class="text-3xl mb-2">📈</div>
+                                        <div class="font-medium text-gray-900">ثلاثة جنود بيض</div>
+                                        <div class="text-xs text-gray-500">تأكيد الاتجاه الصاعد</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- محتوى المحاكاة -->
+                        <div class="p-6 hidden" id="simulationsContent">
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">محاكاة الاستثمار</h3>
+                                <p class="text-gray-500">تدرب على الاستثمار بدون مخاطر حقيقية</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- محاكاة التداول -->
+                                <div class="bg-white border border-gray-200 rounded-xl p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h4 class="font-semibold text-gray-900">محاكاة التداول</h4>
+                                        <span class="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full">
+                                            رصيد: <span id="simBalance">100,000</span> ج.م
+                                        </span>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="text-sm text-gray-500 block mb-2">اختر سهم للتداول</label>
+                                        <select id="simStockSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                            <option value="COMI">COMI - البنك التجاري الدولي</option>
+                                            <option value="ETAL">ETAL - الإتحاد للمنتجات</option>
+                                            <option value="ORHD">ORHD - أوراسكوم</option>
+                                        </select>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4 mb-4">
+                                        <div class="bg-gray-50 rounded-lg p-3 text-center">
+                                            <div class="text-xs text-gray-500">السعر الحالي</div>
+                                            <div class="text-xl font-bold text-gray-900" id="simStockPrice">45.50</div>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-3 text-center">
+                                            <div class="text-xs text-gray-500">التغير</div>
+                                            <div class="text-xl font-bold text-green-600" id="simStockChange">+2.3%</div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="text-sm text-gray-500 block mb-2">عدد الأسهم</label>
+                                        <input type="number" id="simShares" value="100" min="1" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button id="simBuyBtn" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                            <i class="fas fa-arrow-up ml-2"></i>شراء
+                                        </button>
+                                        <button id="simSellBtn" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                                            <i class="fas fa-arrow-down ml-2"></i>بيع
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- محفظة المحاكاة -->
+                                <div class="bg-white border border-gray-200 rounded-xl p-6">
+                                    <h4 class="font-semibold text-gray-900 mb-4">محفظتك</h4>
+                                    <div id="simPortfolio" class="space-y-3">
+                                        <div class="text-center py-8 text-gray-400">
+                                            <i class="fas fa-briefcase text-4xl mb-2"></i>
+                                            <p>محفظتك فارغة</p>
+                                            <p class="text-sm">ابدأ بالشراء لبناء محفظتك</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 pt-4 border-t border-gray-200">
+                                        <div class="flex justify-between text-sm">
+                                            <span class="text-gray-500">إجمالي القيمة:</span>
+                                            <span class="font-semibold" id="simTotalValue">100,000 ج.م</span>
+                                        </div>
+                                        <div class="flex justify-between text-sm mt-2">
+                                            <span class="text-gray-500">الربح/الخسارة:</span>
+                                            <span class="font-semibold text-green-600" id="simProfitLoss">+0 ج.م</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- سجل المعاملات -->
+                            <div class="mt-6 bg-white border border-gray-200 rounded-xl p-6">
+                                <h4 class="font-semibold text-gray-900 mb-4">سجل المعاملات</h4>
+                                <div id="simTransactions" class="max-h-48 overflow-y-auto">
+                                    <div class="text-center py-4 text-gray-400 text-sm">
+                                        لا توجد معاملات بعد
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- محتوى الحاسبات -->
+                        <div class="p-6 hidden" id="calculatorsContent">
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">الحاسبات المالية</h3>
+                                <p class="text-gray-500">استخدم هذه الحاسبات لفهم المعادلات المالية</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- حاسبة العائد -->
+                                <div class="bg-white border border-gray-200 rounded-xl p-6">
+                                    <h4 class="font-semibold text-gray-900 mb-4">
+                                        <i class="fas fa-percentage text-blue-500 ml-2"></i>حاسبة العائد على الاستثمار (ROI)
+                                    </h4>
+                                    <div class="bg-blue-50 rounded-lg p-4 mb-4">
+                                        <div class="text-center font-mono text-lg text-blue-800">
+                                            ROI = (الربح ÷ التكلفة) × 100
+                                        </div>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="text-sm text-gray-500 block mb-1">تكلفة الاستثمار</label>
+                                            <input type="number" id="calcCost" value="10000" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        </div>
+                                        <div>
+                                            <label class="text-sm text-gray-500 block mb-1">القيمة الحالية</label>
+                                            <input type="number" id="calcCurrentValue" value="12000" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        </div>
+                                        <button id="calcROI" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">احسب العائد</button>
+                                        <div class="bg-gray-50 rounded-lg p-4 text-center">
+                                            <div class="text-sm text-gray-500">العائد على الاستثمار</div>
+                                            <div class="text-3xl font-bold text-green-600" id="calcROIResult">20%</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- حاسبة الفائدة المركبة -->
+                                <div class="bg-white border border-gray-200 rounded-xl p-6">
+                                    <h4 class="font-semibold text-gray-900 mb-4">
+                                        <i class="fas fa-chart-line text-green-500 ml-2"></i>حاسبة الفائدة المركبة
+                                    </h4>
+                                    <div class="bg-green-50 rounded-lg p-4 mb-4">
+                                        <div class="text-center font-mono text-lg text-green-800">
+                                            A = P(1 + r/n)^(nt)
+                                        </div>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="text-sm text-gray-500 block mb-1">المبلغ الأولي (P)</label>
+                                            <input type="number" id="calcPrincipal" value="10000" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        </div>
+                                        <div>
+                                            <label class="text-sm text-gray-500 block mb-1">نسبة الفائدة السنوية % (r)</label>
+                                            <input type="number" id="calcRate" value="10" step="0.1" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        </div>
+                                        <div>
+                                            <label class="text-sm text-gray-500 block mb-1">عدد السنوات (t)</label>
+                                            <input type="number" id="calcYears" value="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        </div>
+                                        <button id="calcCompound" class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">احسب</button>
+                                        <div class="bg-gray-50 rounded-lg p-4 text-center">
+                                            <div class="text-sm text-gray-500">القيمة النهائية</div>
+                                            <div class="text-3xl font-bold text-green-600" id="calcCompoundResult">16,105.10</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- حاسبة نسبة P/E -->
+                                <div class="bg-white border border-gray-200 rounded-xl p-6">
+                                    <h4 class="font-semibold text-gray-900 mb-4">
+                                        <i class="fas fa-balance-scale text-purple-500 ml-2"></i>حاسبة مضاعف الربحية (P/E)
+                                    </h4>
+                                    <div class="bg-purple-50 rounded-lg p-4 mb-4">
+                                        <div class="text-center font-mono text-lg text-purple-800">
+                                            P/E = سعر السهم ÷ ربحية السهم
+                                        </div>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="text-sm text-gray-500 block mb-1">سعر السهم</label>
+                                            <input type="number" id="calcStockPrice" value="100" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        </div>
+                                        <div>
+                                            <label class="text-sm text-gray-500 block mb-1">ربحية السهم (EPS)</label>
+                                            <input type="number" id="calcEPS" value="5" step="0.1" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        </div>
+                                        <button id="calcPE" class="w-full px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">احسب</button>
+                                        <div class="bg-gray-50 rounded-lg p-4 text-center">
+                                            <div class="text-sm text-gray-500">مضاعف الربحية</div>
+                                            <div class="text-3xl font-bold text-purple-600" id="calcPEResult">20</div>
+                                            <div class="text-xs text-gray-400 mt-2" id="calcPEInterpretation">السهم بتقييم معتدل</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- حاسبة المتوسط المتحرك -->
+                                <div class="bg-white border border-gray-200 rounded-xl p-6">
+                                    <h4 class="font-semibold text-gray-900 mb-4">
+                                        <i class="fas fa-wave-square text-orange-500 ml-2"></i>حاسبة المتوسط المتحرك
+                                    </h4>
+                                    <div class="bg-orange-50 rounded-lg p-4 mb-4">
+                                        <div class="text-center font-mono text-lg text-orange-800">
+                                            SMA = (Σ الأسعار) ÷ n
+                                        </div>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="text-sm text-gray-500 block mb-1">أدخل الأسعار (مفصولة بفواصل)</label>
+                                            <input type="text" id="calcPrices" value="100, 102, 98, 105, 103, 107, 104" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        </div>
+                                        <div>
+                                            <label class="text-sm text-gray-500 block mb-1">عدد الفترات</label>
+                                            <input type="number" id="calcPeriod" value="7" min="2" max="50" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                        </div>
+                                        <button id="calcSMA" class="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">احسب</button>
+                                        <div class="bg-gray-50 rounded-lg p-4 text-center">
+                                            <div class="text-sm text-gray-500">المتوسط المتحرك البسيط</div>
+                                            <div class="text-3xl font-bold text-orange-600" id="calcSMAResult">102.71</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- محتوى الاختبار -->
+                        <div class="p-6 hidden" id="quizContent">
+                            <div class="mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">اختبر معلوماتك</h3>
+                                <p class="text-gray-500">أجب على الأسئلة لاختبار فهمك للاستثمار</p>
+                            </div>
+
+                            <div id="quizContainer">
+                                <!-- شاشة البداية -->
+                                <div id="quizStart" class="text-center py-12">
+                                    <div class="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <i class="fas fa-brain text-4xl text-blue-600"></i>
+                                    </div>
+                                    <h4 class="text-xl font-semibold text-gray-900 mb-2">اختبار معلومات الاستثمار</h4>
+                                    <p class="text-gray-500 mb-6">10 أسئلة لقياس مستوى معرفتك</p>
+                                    <div class="flex justify-center gap-4 mb-6">
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-blue-600">10</div>
+                                            <div class="text-xs text-gray-500">أسئلة</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-green-600">5</div>
+                                            <div class="text-xs text-gray-500">دقائق</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="text-2xl font-bold text-purple-600">100</div>
+                                            <div class="text-xs text-gray-500">نقطة</div>
+                                        </div>
+                                    </div>
+                                    <button id="startQuizBtn" class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
+                                        <i class="fas fa-play ml-2"></i>ابدأ الاختبار
+                                    </button>
+                                </div>
+
+                                <!-- منطقة الأسئلة -->
+                                <div id="quizQuestions" class="hidden">
+                                    <div class="flex items-center justify-between mb-6">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-sm text-gray-500">السؤال</span>
+                                            <span class="text-lg font-bold text-blue-600" id="currentQuestion">1</span>
+                                            <span class="text-sm text-gray-500">من 10</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <i class="fas fa-clock text-gray-400"></i>
+                                            <span class="text-sm font-medium" id="quizTimer">5:00</span>
+                                        </div>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2 mb-6">
+                                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" id="quizProgress" style="width: 10%"></div>
+                                    </div>
+                                    <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+                                        <h4 class="text-lg font-semibold text-gray-900 mb-4" id="questionText"></h4>
+                                        <div id="answerOptions" class="space-y-3"></div>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <button id="prevQuestionBtn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200" disabled>
+                                            <i class="fas fa-arrow-right ml-2"></i>السابق
+                                        </button>
+                                        <button id="nextQuestionBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                            التالي<i class="fas fa-arrow-left mr-2"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- النتائج -->
+                                <div id="quizResults" class="hidden text-center py-12">
+                                    <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                        <i class="fas fa-trophy text-4xl text-yellow-500"></i>
+                                    </div>
+                                    <h4 class="text-xl font-semibold text-gray-900 mb-2">أحسنت!</h4>
+                                    <div class="text-5xl font-bold text-blue-600 mb-4" id="finalScore">80%</div>
+                                    <p class="text-gray-500 mb-6" id="scoreMessage">أداء جيد جداً! استمر في التعلم</p>
+                                    <div class="flex justify-center gap-4">
+                                        <button id="retakeQuizBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                            <i class="fas fa-redo ml-2"></i>أعد الاختبار
+                                        </button>
+                                        <button id="reviewAnswersBtn" class="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">
+                                            <i class="fas fa-list ml-2"></i>راجع الإجابات
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- صفحة قائمة المراقبة -->
+                <div class="page hidden" id="watchlistPage">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-900">
+                                <i class="fas fa-eye text-blue-500 ml-2"></i>قائمة المراقبة
+                            </h3>
+                            <button onclick="showAddToWatchlistModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm transition-colors">
+                                <i class="fas fa-plus ml-1"></i>إضافة سهم
+                            </button>
+                        </div>
+                        <div id="watchlistContent">
+                            <div id="watchlistLoading" class="flex flex-col items-center justify-center py-16">
+                                <div class="w-12 h-12 border-4 border-gray-200 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
+                                <p class="text-gray-500 text-sm">جاري تحميل قائمة المراقبة...</p>
+                            </div>
+                            <div id="watchlistEmpty" class="hidden py-16 text-center">
+                                <i class="fas fa-eye-slash text-4xl text-gray-300 mb-4"></i>
+                                <p class="text-gray-500 mb-4">لم تقم بإضافة أي أسهم إلى قائمة المراقبة بعد</p>
+                                <button onclick="navigateToPage('stocks')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm">
+                                    تصفح الأسهم
+                                </button>
+                            </div>
+                            <div id="watchlistTableContainer" class="hidden overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="bg-gray-50 text-right">
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الرمز</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر الحالي</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">التغير</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">تنبيه السعر</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">ملاحظات</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">إجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="watchlistTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- صفحة محفظتي -->
+                <div class="page hidden" id="portfolioPage">
+                    <!-- ملخص المحفظة -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                    <i class="fas fa-wallet text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">إجمالي القيمة</p>
+                                    <p class="text-xl font-bold text-gray-900" id="portfolioTotalValue">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                                    <i class="fas fa-arrow-up text-green-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">الربح/الخسارة</p>
+                                    <p class="text-xl font-bold" id="portfolioGainLoss">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                                    <i class="fas fa-percentage text-purple-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">نسبة الربح</p>
+                                    <p class="text-xl font-bold" id="portfolioGainPercent">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                                    <i class="fas fa-coins text-amber-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">عدد الأصول</p>
+                                    <p class="text-xl font-bold text-gray-900" id="portfolioAssetCount">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- متابعة فقط (بدون تنفيذ أوامر شراء/بيع) -->
+                    <div class="bg-blue-50 border border-blue-200 text-blue-800 rounded-xl p-4 mb-6">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-shield-alt mt-1"></i>
+                            <div>
+                                <h4 class="font-semibold">وضع إدارة الأصول (Monitoring Only)</h4>
+                                <p class="text-sm mt-1">
+                                    هذه الصفحة لإضافة أصولك الفعلية ومتابعة الأداء وإدارة المخاطر فقط.
+                                    لا يتم تنفيذ أوامر شراء أو بيع داخل التطبيق.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- رؤى إدارة المخاطر -->
+                    <div id="portfolioRiskInsights" class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-6"></div>
+
+                    <!-- إضافة أصل جديد -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer" onclick="toggleAddAssetForm()">
+                            <h3 class="font-semibold text-gray-900">
+                                <i class="fas fa-plus-circle text-emerald-500 ml-2"></i>إضافة أصل جديد
+                            </h3>
+                            <i class="fas fa-chevron-down text-gray-400 transition-transform" id="addAssetChevron"></i>
+                        </div>
+                        <div id="addAssetForm" class="hidden p-6">
+                            <form id="newAssetForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">نوع الأصل</label>
+                                    <select id="assetType" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700">
+                                        <option value="stock">سهم</option>
+                                        <option value="cash">نقد</option>
+                                        <option value="gold">ذهب</option>
+                                        <option value="silver">فضة</option>
+                                        <option value="crypto">عملة رقمية</option>
+                                        <option value="bond">سند</option>
+                                        <option value="sukuk">صكوك</option>
+                                        <option value="fund">صندوق استثماري</option>
+                                        <option value="realestate">عقار</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">اسم الأصل</label>
+                                    <input type="text" id="assetName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="مثال: أوراسكوم للإنشاءات">
+                                </div>
+                                <div id="stockSelectionContainer" class="hidden">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">اختر السهم من القائمة</label>
+                                    <select id="assetStockSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                                        <option value="">اختر السهم...</option>
+                                    </select>
+                                    <p class="text-xs text-gray-500 mt-1">عند اختيار السهم يتم تعبئة الاسم والرمز تلقائياً.</p>
+                                    <input type="hidden" id="assetStockId">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">الرمز (اختياري)</label>
+                                    <input type="text" id="assetTicker" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="مثال: ORAS">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">الكمية</label>
+                                    <input type="number" id="assetQuantity" required step="0.0001" min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="0">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">سعر الشراء</label>
+                                    <input type="number" id="assetPurchasePrice" required step="0.01" min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="0.00">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">تاريخ الشراء</label>
+                                    <input type="date" id="assetPurchaseDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="assetIsHalal" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                                    <label for="assetIsHalal" class="mr-2 text-sm text-gray-700">أصل حلال</label>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات</label>
+                                    <textarea id="assetNotes" rows="2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="ملاحظات إضافية..."></textarea>
+                                </div>
+                                <div class="md:col-span-2 lg:col-span-3 flex justify-end gap-3">
+                                    <button type="button" onclick="toggleAddAssetForm()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700">إلغاء</button>
+                                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">إضافة الأصل</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- قائمة الأصول -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-900">
+                                <i class="fas fa-list text-blue-500 ml-2"></i>الأصول
+                            </h3>
+                            <button onclick="syncAssetPrices()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors">
+                                <i class="fas fa-sync ml-1"></i>تحديث الأسعار
+                            </button>
+                        </div>
+                        <div id="assetsContent">
+                            <div id="assetsLoading" class="flex flex-col items-center justify-center py-16">
+                                <div class="w-12 h-12 border-4 border-gray-200 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
+                                <p class="text-gray-500 text-sm">جاري تحميل الأصول...</p>
+                            </div>
+                            <div id="assetsEmpty" class="hidden py-16 text-center">
+                                <i class="fas fa-folder-open text-4xl text-gray-300 mb-4"></i>
+                                <p class="text-gray-500">لم تقم بإضافة أي أصول بعد</p>
+                            </div>
+                            <div id="assetsTableContainer" class="hidden overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="bg-gray-50 text-right">
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">النوع</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الكمية</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">سعر الشراء</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر الحالي</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">القيمة</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الربح/الخسارة</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">إجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="assetsTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- صفحة الدخل والمصروفات -->
+                <div class="page hidden" id="income-expensePage">
+                    <!-- ملخص مالي -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                                    <i class="fas fa-arrow-down text-green-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">إجمالي الدخل</p>
+                                    <p class="text-xl font-bold text-green-600" id="totalIncome">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                                    <i class="fas fa-arrow-up text-red-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">إجمالي المصروفات</p>
+                                    <p class="text-xl font-bold text-red-600" id="totalExpenses">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                                    <i class="fas fa-balance-scale text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500">صافي التدفق النقدي</p>
+                                    <p class="text-xl font-bold" id="netCashFlow">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- إضافة معاملة -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer" onclick="toggleAddTransactionForm()">
+                            <h3 class="font-semibold text-gray-900">
+                                <i class="fas fa-plus-circle text-emerald-500 ml-2"></i>إضافة معاملة جديدة
+                            </h3>
+                            <i class="fas fa-chevron-down text-gray-400 transition-transform" id="addTransactionChevron"></i>
+                        </div>
+                        <div id="addTransactionForm" class="hidden p-6">
+                            <form id="newTransactionForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">نوع المعاملة</label>
+                                    <select id="transactionType" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                                        <option value="income">دخل</option>
+                                        <option value="expense">مصروف</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">الفئة</label>
+                                    <select id="transactionCategory" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                                        <option value="salary">راتب</option>
+                                        <option value="dividend">أرباح الأسهم</option>
+                                        <option value="trading_profit">أرباح التداول</option>
+                                        <option value="investment">استثمار</option>
+                                        <option value="bills">فواتير</option>
+                                        <option value="food">طعام</option>
+                                        <option value="transport">مواصلات</option>
+                                        <option value="entertainment">ترفيه</option>
+                                        <option value="other">أخرى</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">المبلغ (جنيه)</label>
+                                    <input type="number" id="transactionAmount" required step="0.01" min="0" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="0.00">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">التاريخ</label>
+                                    <input type="date" id="transactionDate" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
+                                    <input type="text" id="transactionDescription" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="وصف المعاملة...">
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="transactionRecurring" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
+                                    <label for="transactionRecurring" class="mr-2 text-sm text-gray-700">معاملة متكررة</label>
+                                </div>
+                                <div id="recurrencePeriodContainer" class="hidden">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">فترة التكرار</label>
+                                    <select id="recurrencePeriod" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                                        <option value="daily">يومي</option>
+                                        <option value="weekly">أسبوعي</option>
+                                        <option value="monthly">شهري</option>
+                                        <option value="yearly">سنوي</option>
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2 lg:col-span-3 flex justify-end gap-3">
+                                    <button type="button" onclick="toggleAddTransactionForm()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700">إلغاء</button>
+                                    <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">إضافة المعاملة</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- قائمة المعاملات -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-900">
+                                <i class="fas fa-list text-blue-500 ml-2"></i>المعاملات
+                            </h3>
+                            <div class="flex gap-2">
+                                <select id="transactionFilter" onchange="filterTransactions()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="all">الكل</option>
+                                    <option value="income">الدخل فقط</option>
+                                    <option value="expense">المصروفات فقط</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="transactionsContent">
+                            <div id="transactionsLoading" class="flex flex-col items-center justify-center py-16">
+                                <div class="w-12 h-12 border-4 border-gray-200 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
+                                <p class="text-gray-500 text-sm">جاري تحميل المعاملات...</p>
+                            </div>
+                            <div id="transactionsEmpty" class="hidden py-16 text-center">
+                                <i class="fas fa-receipt text-4xl text-gray-300 mb-4"></i>
+                                <p class="text-gray-500">لا توجد معاملات مسجلة</p>
+                            </div>
+                            <div id="transactionsTableContainer" class="hidden overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="bg-gray-50 text-right">
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">النوع</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الفئة</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">المبلغ</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">التاريخ</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الوصف</th>
+                                            <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">إجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="transactionsTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- صفحة أخبار الاستثمار -->
+                <div class="page hidden" id="newsPage">
+                    <!-- مؤشر تحميل الأخبار -->
+                    <div id="newsLoading" class="flex flex-col items-center justify-center py-20">
+                        <div class="w-16 h-16 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                        <p class="text-gray-500 text-sm">جاري تحميل الأخبار...</p>
+                    </div>
+
+                    <!-- محتوى الأخبار -->
+                    <div id="newsContent" class="hidden">
+                        <!-- أسعار السلع -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <!-- بطاقة سعر الذهب -->
+                            <div class="bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl p-6 shadow-lg text-white">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-coins text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-semibold text-lg">الذهب</h3>
+                                            <p class="text-white/80 text-sm">Gold / USD</p>
+                                        </div>
+                                    </div>
+                                    <span id="goldChangeBadge" class="px-3 py-1 bg-white/20 rounded-full text-sm"></span>
+                                </div>
+                                <div class="flex items-end gap-2">
+                                    <span id="goldPrice" class="text-3xl font-bold">-</span>
+                                    <span class="text-white/80 mb-1">USD/oz</span>
+                                </div>
+                                <div id="goldNote" class="mt-2 text-xs text-white/70 hidden"></div>
+                            </div>
+
+                            <!-- بطاقة سعر الفضة -->
+                            <div class="bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl p-6 shadow-lg text-white">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-gem text-2xl"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-semibold text-lg">الفضة</h3>
+                                            <p class="text-white/80 text-sm">Silver / USD</p>
+                                        </div>
+                                    </div>
+                                    <span id="silverChangeBadge" class="px-3 py-1 bg-white/20 rounded-full text-sm"></span>
+                                </div>
+                                <div class="flex items-end gap-2">
+                                    <span id="silverPrice" class="text-3xl font-bold">-</span>
+                                    <span class="text-white/80 mb-1">USD/oz</span>
+                                </div>
+                                <div id="silverNote" class="mt-2 text-xs text-white/70 hidden"></div>
+                            </div>
+                        </div>
+
+                        <!-- المؤشرات العالمية -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h3 class="font-semibold text-gray-900">
+                                    <i class="fas fa-globe text-blue-500 ml-2"></i>المؤشرات العالمية
+                                </h3>
+                            </div>
+                            <div class="p-4">
+                                <div id="marketIndicesGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <!-- سيتم تحميل المؤشرات هنا -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- تبويبات الأخبار -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                            <div class="border-b border-gray-200">
+                                <nav class="flex gap-1 px-4" id="newsTabs">
+                                    <button class="news-tab px-4 py-3 text-sm font-medium border-b-2 border-blue-600 text-blue-600" data-category="gold">
+                                        <i class="fas fa-coins ml-1"></i>الذهب
+                                    </button>
+                                    <button class="news-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-category="silver">
+                                        <i class="fas fa-gem ml-1"></i>الفضة
+                                    </button>
+                                    <button class="news-tab px-4 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-category="global">
+                                        <i class="fas fa-earth-americas ml-1"></i>العالمية
+                                    </button>
+                                </nav>
+                            </div>
+                            <div id="newsListContainer" class="p-6">
+                                <!-- قائمة الأخبار -->
+                                <div id="newsList" class="space-y-4">
+                                    <!-- سيتم تحميل الأخبار هنا -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- صفحة التنبيهات المجدولة -->
+                <div class="page hidden" id="alertsPage">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-900">
+                                <i class="fas fa-bell text-yellow-500 ml-2"></i>التنبيهات المجدولة
+                            </h3>
+                            <button onclick="showAddAlertModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm transition-colors">
+                                <i class="fas fa-plus ml-1"></i>إضافة تنبيه
+                            </button>
+                        </div>
+                        <div id="alertsContent">
+                            <div id="alertsLoading" class="flex flex-col items-center justify-center py-16">
+                                <div class="w-12 h-12 border-4 border-gray-200 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
+                                <p class="text-gray-500 text-sm">جاري تحميل التنبيهات...</p>
+                            </div>
+                            <div id="alertsEmpty" class="hidden py-16 text-center">
+                                <i class="fas fa-bell-slash text-4xl text-gray-300 mb-4"></i>
+                                <p class="text-gray-500 mb-4">لم تقم بإنشاء أي تنبيهات بعد</p>
+                                <button onclick="showAddAlertModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm">
+                                    إنشاء تنبيه جديد
+                                </button>
+                            </div>
+                            <div id="alertsListContainer" class="hidden p-6 grid gap-4" id="alertsList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- صفحة الإعدادات -->
+                <div class="page hidden" id="settingsPage">
+                    <div class="max-w-2xl">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h3 class="font-semibold text-gray-900">
+                                    <i class="fas fa-user-circle text-blue-500 ml-2"></i>معلومات الحساب
+                                </h3>
+                            </div>
+                            <div class="p-6">
+                                <div id="settingsNotLoggedIn" class="text-center py-8">
+                                    <img src="/static/images/auth-illustration.svg" alt="تسجيل الدخول" class="w-full max-w-sm mx-auto mb-5 rounded-xl border border-gray-100">
+                                    <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
+                                    <p class="text-gray-500 mb-4">يجب تسجيل الدخول للوصول إلى الإعدادات</p>
+                                    <button onclick="openAuthModal('login')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm">
+                                        تسجيل الدخول
+                                    </button>
+                                </div>
+                                <form id="settingsForm" class="hidden space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
+                                        <input type="email" id="settingsEmail" disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">اسم المستخدم</label>
+                                        <input type="text" id="settingsUsername" disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                                    </div>
+                                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                        <div>
+                                            <p class="font-medium text-gray-900">تفضيل الاستثمار الحلال</p>
+                                            <p class="text-sm text-gray-500">عرض الأسهم الحلال فقط في التوصيات</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" id="settingsHalalOnly" class="sr-only peer">
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">مستوى تحمل المخاطر</label>
+                                        <select id="settingsRiskTolerance" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                                            <option value="low">منخفض - استثمارات آمنة</option>
+                                            <option value="medium">متوسط - توازن بين الأمان والعائد</option>
+                                            <option value="high">مرتفع - استثمارات عالية المخاطر</option>
+                                        </select>
+                                    </div>
+                                    <div class="pt-4 flex justify-end">
+                                        <button type="submit" class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg">
+                                            حفظ الإعدادات
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- إدارة مفاتيح API -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h3 class="font-semibold text-gray-900">
+                                    <i class="fas fa-key text-amber-500 ml-2"></i>مفاتيح API
+                                </h3>
+                            </div>
+                            <div class="p-6">
+                                <p class="text-sm text-gray-600 mb-4">أدخل أو حدّث مفتاح API للوصول إلى واجهة البرمجة:</p>
+                                <form class="flex gap-2" onsubmit="return false;">
+                                    <input type="password" id="currentApiKey" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm" autocomplete="off" placeholder="أدخل مفتاح API">
+                                    <button type="button" id="saveSettingsApiKey" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white">
+                                        <i class="fas fa-save"></i>
+                                    </button>
+                                    <button type="button" onclick="copyApiKey()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- صفحة الاشتراك -->
+                <div class="page hidden" id="subscriptionPage">
+                    <div class="max-w-5xl mx-auto">
+
+                        <!-- Current plan banner -->
+                        <div id="currentPlanBanner" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl p-6 mb-8 flex items-center justify-between">
+                            <div>
+                                <p class="text-sm opacity-80 mb-1">خطتك الحالية</p>
+                                <h2 class="text-2xl font-bold" id="currentPlanName">مجاني</h2>
+                                <p class="text-sm opacity-80 mt-1" id="currentPlanExpiry"></p>
+                            </div>
+                            <i class="fas fa-crown text-yellow-300 text-5xl"></i>
+                        </div>
+
+                        <!-- Payment result alert -->
+                        <div id="paymentResultAlert" class="hidden mb-6 p-4 rounded-xl text-sm font-medium"></div>
+
+                        <!-- Plans grid -->
+                        <h3 class="text-xl font-bold text-gray-900 mb-6 text-center">اختر الخطة المناسبة لك</h3>
+
+                        <!-- Billing toggle -->
+                        <div class="flex items-center justify-center gap-4 mb-8">
+                            <span class="text-sm font-medium text-gray-700">شهري</span>
+                            <button id="billingToggle" class="relative w-12 h-6 bg-gray-300 rounded-full transition-colors duration-200 focus:outline-none" aria-label="تبديل دورة الفوترة">
+                                <span id="billingToggleThumb" class="absolute top-1 right-1 w-4 h-4 bg-white rounded-full shadow transition-all duration-200"></span>
+                            </button>
+                            <span class="text-sm font-medium text-gray-700">سنوي <span class="text-green-600 text-xs font-bold">(وفر حتى 38%)</span></span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10" id="plansGrid">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <!-- Paymob iframe container -->
+                        <div id="paymobContainer" class="hidden mt-8">
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h4 class="font-semibold text-gray-900">إتمام الدفع عبر Paymob</h4>
+                                    <button id="cancelPayment" class="text-sm text-gray-500 hover:text-gray-700">
+                                        <i class="fas fa-times ml-1"></i>إلغاء
+                                    </button>
+                                </div>
+                                <iframe id="paymobIframe" src="" width="100%" height="600"
+                                    style="border:none;border-radius:8px;"
+                                    allow="payment"></iframe>
+                            </div>
+                        </div>
+
+                        <!-- Feature comparison note -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 text-center">
+                            <i class="fas fa-shield-alt ml-2"></i>
+                            جميع المدفوعات مؤمنة عبر بوابة Paymob المعتمدة في مصر — بطاقات فيزا، ماستركارد، فوري، وميزة
+                        </div>
+                    </div>
+                </div>
+
+                <!-- نافذة تفاصيل السهم -->
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-50 opacity-0 invisible transition-all duration-200 p-2 sm:p-4"
+                    id="stockModal">
+                    <div id="stockModalPanel" class="transition-all duration-200">
+                        <div class="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between shrink-0">
+                            <h3 class="text-lg font-semibold text-gray-900" id="modalStockName">تفاصيل السهم</h3>
+                            <button class="text-gray-400 hover:text-gray-600 text-2xl" id="closeModal">&times;</button>
+                        </div>
+                        <div class="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0" id="modalBody">
+                            <!-- سيتم تحميل تفاصيل السهم هنا -->
+                        </div>
+                        <div class="px-4 sm:px-6 py-4 border-t border-gray-200 flex justify-end shrink-0">
+                            <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700"
+                                id="closeModalBtn">إغلاق</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- السكريبتات -->
+    <script type="module" src="/static/js/app.js?v=2026030702"></script>
+    <script>
+        // تبديل النافذة المنبثقة
+        const modal = document.getElementById('stockModal');
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+                document.body.classList.remove('overflow-hidden');
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                modal.classList.remove('active');
+                document.body.classList.remove('overflow-hidden');
+            }
+        });
+    </script>
+</body>
+
+</html>
