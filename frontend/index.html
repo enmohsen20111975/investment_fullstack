@@ -183,11 +183,6 @@
                         <i class="fas fa-search w-5 text-center"></i>
                         <span class="text-sm font-medium">البحث</span>
                     </div>
-                    <div class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer text-gray-600 hover:bg-gray-100"
-                        data-page="halal">
-                        <i class="fas fa-check-circle w-5 text-center"></i>
-                        <span class="text-sm font-medium">الأسهم الحلال</span>
-                    </div>
                 </div>
 
                 <div class="mb-6">
@@ -278,6 +273,24 @@
                         </div>
                     </div>
                 </div>
+                <div class="market-pulse mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="pulse-item">
+                        <div class="pulse-label">اتساع السوق</div>
+                        <div class="pulse-value" id="pulseBreadth">-</div>
+                    </div>
+                    <div class="pulse-item">
+                        <div class="pulse-label">نبض المخاطرة</div>
+                        <div class="pulse-value" id="pulseRisk">-</div>
+                    </div>
+                    <div class="pulse-item">
+                        <div class="pulse-label">تحديث السوق</div>
+                        <div class="pulse-value" id="pulseUpdatedAt">-</div>
+                    </div>
+                    <div class="pulse-item">
+                        <div class="pulse-label">وضع الجلسة</div>
+                        <div class="pulse-value" id="pulseSession">-</div>
+                    </div>
+                </div>
             </header>
 
             <!-- منطقة المحتوى -->
@@ -334,6 +347,17 @@
                                 <div class="text-2xl font-semibold text-gray-900" id="egx30Value">-</div>
                                 <div class="text-sm font-medium mt-1" id="egx30ChangePct">-</div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- أثر محفظتي اليوم -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-900"><i class="fas fa-briefcase text-indigo-500 ml-2"></i>أثر محفظتي اليوم</h3>
+                            <span class="text-xs text-gray-500">يحتاج تسجيل الدخول</span>
+                        </div>
+                        <div class="p-6" id="portfolioImpactFeed">
+                            <div class="text-sm text-gray-500">سجّل الدخول ثم أضف أصولك لرؤية التأثير اليومي على محفظتك.</div>
                         </div>
                     </div>
 
@@ -447,8 +471,6 @@
                                     <option value="">جميع القطاعات</option>
                                 </select>
                                 <label class="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="checkbox" id="halalOnlyFilter" class="rounded">
-                                    حلال فقط
                                 </label>
                             </div>
                         </div>
@@ -465,8 +487,6 @@
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">التغير</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">القطاع</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الامتثال
-                                        </th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">إجراءات</th>
                                     </tr>
                                 </thead>
@@ -515,19 +535,29 @@
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
                                 <div>
                                     <label class="text-sm text-gray-500 block mb-1">الحد الأدنى للسعر</label>
-                                    <input type="number" id="minPrice" placeholder="0"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-right">
+                                    <select id="minPrice"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                        <option value="">بدون حد</option>
+                                        <option value="1">1 جنيه</option>
+                                        <option value="5">5 جنيهات</option>
+                                        <option value="10">10 جنيهات</option>
+                                        <option value="50">50 جنيهًا</option>
+                                        <option value="100">100 جنيه</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="text-sm text-gray-500 block mb-1">الحد الأقصى للسعر</label>
-                                    <input type="number" id="maxPrice" placeholder="1000"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-right">
+                                    <select id="maxPrice"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                        <option value="">بدون حد</option>
+                                        <option value="100">100 جنيه</option>
+                                        <option value="500">500 جنيه</option>
+                                        <option value="1000" selected>1,000 جنيه</option>
+                                        <option value="5000">5,000 جنيه</option>
+                                        <option value="10000">10,000 جنيه</option>
+                                    </select>
                                 </div>
                                 <div class="flex items-end">
-                                    <label class="flex items-center gap-2 text-sm text-gray-600">
-                                        <input type="checkbox" id="searchHalalOnly" class="rounded">
-                                        حلال فقط
-                                    </label>
                                 </div>
                             </div>
                         </div>
@@ -551,53 +581,6 @@
                     </div>
                 </div>
 
-                <!-- صفحة الأسهم الحلال -->
-                <div class="page hidden" id="halalPage">
-                    <!-- مؤشر تحميل الأسهم الحلال -->
-                    <div id="halalPageLoading" class="flex flex-col items-center justify-center py-20">
-                        <div class="w-16 h-16 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-                        <p class="text-gray-500 text-sm">جاري تحميل الأسهم الحلال...</p>
-                    </div>
-                    <!-- محتوى الأسهم الحلال -->
-                    <div id="halalPageContent" class="hidden">
-                    <div
-                        class="flex items-start gap-3 p-4 mb-6 rounded-lg border bg-green-50 border-green-200 text-green-700">
-                        <i class="fas fa-info-circle mt-0.5"></i>
-                        <div>
-                            <strong class="block">الأسهم المتوافقة مع الشريعة</strong>
-                            <p class="text-sm">هذه الأسهم تعتبر حلال وفقاً لمؤشر EGX 33 للامتثال الشرعي. يرجى استشارة
-                                عالم دين مؤهل لقرارات الاستثمار الشخصية.</p>
-                        </div>
-                    </div>
-
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h3 class="font-semibold text-gray-900"><i
-                                    class="fas fa-check-circle text-green-500 ml-2"></i>قائمة الأسهم الحلال</h3>
-                        </div>
-                        <div class="hidden flex items-center justify-center py-12" id="halalLoading">
-                            <div class="w-10 h-10 border-4 border-gray-200 border-t-blue-600 rounded-full animate-spin">
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full" id="halalTable">
-                                <thead>
-                                    <tr class="bg-gray-50 text-right">
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الرمز</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">القطاع</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">ملاحظة
-                                            الامتثال</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    </div>
-                </div>
-
                 <!-- صفحة التوصيات -->
                 <div class="page hidden" id="recommendationsPage">
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
@@ -609,8 +592,16 @@
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div>
                                     <label class="text-sm text-gray-500 block mb-1">رأس المال (جنيه)</label>
-                                    <input type="number" id="capitalInput" value="100000" min="1000"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-right">
+                                    <select id="capitalInput"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                        <option value="10000">10,000 جنيه</option>
+                                        <option value="25000">25,000 جنيه</option>
+                                        <option value="50000">50,000 جنيه</option>
+                                        <option value="100000" selected>100,000 جنيه</option>
+                                        <option value="250000">250,000 جنيه</option>
+                                        <option value="500000">500,000 جنيه</option>
+                                        <option value="1000000">1,000,000 جنيه</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="text-sm text-gray-500 block mb-1">تحمل المخاطر</label>
@@ -623,20 +614,32 @@
                                 </div>
                                 <div>
                                     <label class="text-sm text-gray-500 block mb-1">الحد الأقصى للأسهم</label>
-                                    <input type="number" id="maxStocksInput" value="10" min="1" max="20"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-right">
+                                    <select id="maxStocksInput"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                        <option value="5">5 أسهم</option>
+                                        <option value="10" selected>10 أسهم</option>
+                                        <option value="15">15 سهم</option>
+                                        <option value="20">20 سهم</option>
+                                    </select>
                                 </div>
                                 <div>
-                                    <label class="text-sm text-gray-500 block mb-1">القطاعات المفضلة</label>
-                                    <input type="text" id="sectorsInput" placeholder="مثال: البنوك، العقارات"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-right">
+                                    <label class="text-sm text-gray-500 block mb-1">القطاع المفضل</label>
+                                    <select id="sectorsInput"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                        <option value="">جميع القطاعات</option>
+                                        <option value="البنوك">البنوك</option>
+                                        <option value="العقارات">العقارات</option>
+                                        <option value="الاتصالات">الاتصالات</option>
+                                        <option value="الصناعات">الصناعات</option>
+                                        <option value="الأغذية والشراب">الأغذية والشراب</option>
+                                        <option value="الطاقة">الطاقة</option>
+                                        <option value="البتروكيماويات">البتروكيماويات</option>
+                                        <option value="المواد البنائية">المواد البنائية</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="flex items-center justify-between mt-4">
-                                <label class="flex items-center gap-2 text-sm text-gray-600">
-                                    <input type="checkbox" id="recommendHalalOnly" checked class="rounded">
-                                    حلال فقط
-                                </label>
+                                <div></div>
                                 <button id="getRecommendationsBtn"
                                     class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
                                     <i class="fas fa-magic ml-2"></i>احصل على التوصيات
@@ -1943,8 +1946,6 @@
                                     <input type="date" id="assetPurchaseDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
                                 </div>
                                 <div class="flex items-center">
-                                    <input type="checkbox" id="assetIsHalal" checked class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
-                                    <label for="assetIsHalal" class="mr-2 text-sm text-gray-700">أصل حلال</label>
                                 </div>
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">ملاحظات</label>
@@ -2292,16 +2293,6 @@
                                         <label class="block text-sm font-medium text-gray-700 mb-1">اسم المستخدم</label>
                                         <input type="text" id="settingsUsername" disabled class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
                                     </div>
-                                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                        <div>
-                                            <p class="font-medium text-gray-900">تفضيل الاستثمار الحلال</p>
-                                            <p class="text-sm text-gray-500">عرض الأسهم الحلال فقط في التوصيات</p>
-                                        </div>
-                                        <label class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" id="settingsHalalOnly" class="sr-only peer">
-                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                                        </label>
-                                    </div>
                                     <div>
                                         <label class="block text-sm font-medium text-gray-700 mb-1">مستوى تحمل المخاطر</label>
                                         <select id="settingsRiskTolerance" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
@@ -2420,7 +2411,7 @@
     </div>
 
     <!-- السكريبتات -->
-    <script type="module" src="/static/js/app.js?v=2026033104"></script>
+    <script type="module" src="/static/js/app.js?v=2026033107"></script>
     <script>
         // تبديل النافذة المنبثقة
         const modal = document.getElementById('stockModal');

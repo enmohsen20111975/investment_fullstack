@@ -6,7 +6,6 @@
 const { sequelize } = require('../database');
 
 // Import all models
-const ComplianceStatus = require('./enums/ComplianceStatus');
 const InvestmentType = require('./enums/InvestmentType');
 
 const Stock = require('./Stock');
@@ -92,7 +91,6 @@ SharedPortfolio.belongsTo(User, { foreignKey: 'owner_id', as: 'owner' });
 
 module.exports = {
     sequelize,
-    ComplianceStatus,
     InvestmentType,
     Stock,
     StockPriceHistory,

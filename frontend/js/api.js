@@ -152,7 +152,6 @@ class ApiService {
      */
     async getStocks(params = {}) {
         const query = new URLSearchParams();
-        if (params.halal_only) query.append('halal_only', 'true');
         if (params.sector) query.append('sector', params.sector);
         if (params.index) query.append('index', params.index);
         if (params.page) query.append('page', params.page);
@@ -179,7 +178,6 @@ class ApiService {
     async searchStocks(query, params = {}) {
         const searchParams = new URLSearchParams();
         searchParams.append('query', query);
-        if (params.halal_only) searchParams.append('halal_only', 'true');
         if (params.sector) searchParams.append('sector', params.sector);
         if (params.min_price) searchParams.append('min_price', params.min_price);
         if (params.max_price) searchParams.append('max_price', params.max_price);
@@ -198,7 +196,6 @@ class ApiService {
         const query = new URLSearchParams();
         query.append('capital', params.capital);
         query.append('risk', params.risk || 'medium');
-        if (params.halal_only) query.append('halal_only', 'true');
         if (params.max_stocks) query.append('max_stocks', params.max_stocks);
         if (params.sectors) query.append('sectors', params.sectors);
 
@@ -215,22 +212,6 @@ class ApiService {
             method: 'POST',
             body: JSON.stringify(data),
         });
-    }
-
-    /**
-     * Get halal stocks list
-     * @returns {Promise<Object>} Halal stocks
-     */
-    async getHalalStocks() {
-        return this.request('/portfolio/halal-stocks');
-    }
-
-    /**
-     * Get haram stocks list
-     * @returns {Promise<Object>} Haram stocks
-     */
-    async getHaramStocks() {
-        return this.request('/portfolio/haram-stocks');
     }
 
     // ==================== MARKET ====================
@@ -465,6 +446,14 @@ class ApiService {
         return this.request('/user/assets/sync-prices', {
             method: 'POST',
         });
+    }
+
+    /**
+     * Get portfolio impact feed for dashboard
+     * @returns {Promise<Object>} Portfolio impact summary and top movers
+     */
+    async getPortfolioImpact() {
+        return this.request('/user/portfolio-impact');
     }
 
     /**

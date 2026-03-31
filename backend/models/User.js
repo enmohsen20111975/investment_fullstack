@@ -39,10 +39,6 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING(20),
         defaultValue: 'medium'  // low, medium, high
     },
-    halal_only_preference: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
-    },
     created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW

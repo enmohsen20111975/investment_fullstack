@@ -27,7 +27,7 @@ function mapIndexResponse(indexModel) {
         previous_close: toNumber(idx.previous_close, 0),
         change: toNumber(idx.change, 0),
         change_percent: toNumber(idx.change_percent, 0),
-        is_shariah: Boolean(idx.is_shariah),
+        is_shariah: false,
         last_updated: idx.last_update
     };
 }
@@ -69,8 +69,7 @@ router.get('/overview', optionalAuth, async (req, res) => {
             name: s.name,
             name_ar: s.name_ar,
             current_price: s.current_price,
-            price_change: s.getPriceChange ? s.getPriceChange() : null,
-            compliance_status: s.compliance_status
+            price_change: s.getPriceChange ? s.getPriceChange() : null
         }));
 
         const topLosers = sortedByChange.slice(-5).reverse().map(s => ({
@@ -78,8 +77,7 @@ router.get('/overview', optionalAuth, async (req, res) => {
             name: s.name,
             name_ar: s.name_ar,
             current_price: s.current_price,
-            price_change: s.getPriceChange ? s.getPriceChange() : null,
-            compliance_status: s.compliance_status
+            price_change: s.getPriceChange ? s.getPriceChange() : null
         }));
 
         // Get most active by volume
@@ -89,12 +87,8 @@ router.get('/overview', optionalAuth, async (req, res) => {
             name: s.name,
             name_ar: s.name_ar,
             current_price: s.current_price,
-            volume: s.volume,
-            compliance_status: s.compliance_status
+            volume: s.volume
         }));
-
-        // Get halal stocks count
-        const halalStocks = stocks.filter(s => s.is_halal || s.compliance_status === 'halal').length;
 
         const mappedIndices = indices.map(mapIndexResponse);
         const egx30FromTable = mappedIndices.find((idx) => idx.symbol === 'EGX30');
@@ -118,7 +112,6 @@ router.get('/overview', optionalAuth, async (req, res) => {
                 gainers,
                 losers,
                 unchanged,
-                halal_stocks: halalStocks,
                 egx30_stocks: egx30Count,
                 egx70_stocks: egx70Count,
                 egx100_stocks: egx100Count,

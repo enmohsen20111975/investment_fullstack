@@ -15,6 +15,11 @@ const {
 const { authenticateApiKey, requireUser } = require('../middleware/auth');
 const { hashPassword, verifyPassword } = require('../middleware/auth');
 
+const toNumber = (value, fallback = 0) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : fallback;
+};
+
 // ==================== WATCHLIST ====================
 
 /**
@@ -332,6 +337,175 @@ router.post('/assets/sync-prices', authenticateApiKey, requireUser, async (req, 
     } catch (error) {
         logger.error('Sync prices error:', error);
         res.status(500).json({ detail: 'Failed to sync prices' });
+    }
+});
+
+/**
+ * @route GET /api/user/portfolio-impact
+ * @desc Get daily portfolio impact feed based on current market prices
+ */
+router.get('/portfolio-impact', authenticateApiKey, requireUser, async (req, res) => {
+    try {
+        const dayLossAlertPercent = Math.max(0.5, toNumber(req.query.day_loss_alert_percent, 3));
+        const concentrationAlertPercent = Math.max(5, toNumber(req.query.concentration_alert_percent, 35));
+
+        const assets = await UserAsset.findAll({
+            where: {
+                user_id: req.user.id,
+                is_active: true,
+                [Op.or]: [
+                    { stock_id: { [Op.ne]: null } },
+                    { asset_ticker: { [Op.ne]: null } }
+                ]
+            },
+            include: [{
+                model: Stock,
+                as: 'stock',
+                required: false,
+                where: { is_active: true }
+            }]
+        });
+
+        const items = assets
+            .map((asset) => {
+                const stock = asset.stock;
+                if (!stock) {
+                    return null;
+                }
+
+                const quantity = toNumber(asset.quantity);
+                const currentPrice = toNumber(stock.current_price, toNumber(asset.current_price));
+                const previousClose = toNumber(stock.previous_close, currentPrice);
+                const purchasePrice = toNumber(asset.purchase_price);
+
+                if (quantity <= 0 || currentPrice <= 0) {
+                    return null;
+                }
+
+                const investedValue = quantity * purchasePrice;
+                const marketValue = quantity * currentPrice;
+                const dayImpactValue = quantity * (currentPrice - previousClose);
+                const dayImpactPercent = previousClose > 0
+                    ? ((currentPrice - previousClose) / previousClose) * 100
+                    : 0;
+                const totalGainLossValue = marketValue - investedValue;
+                const totalGainLossPercent = investedValue > 0
+                    ? (totalGainLossValue / investedValue) * 100
+                    : 0;
+
+                return {
+                    asset_id: asset.id,
+                    ticker: stock.ticker || asset.asset_ticker,
+                    name_ar: stock.name_ar || stock.name || asset.asset_name,
+                    quantity,
+                    current_price: currentPrice,
+                    previous_close: previousClose,
+                    market_value: Number(marketValue.toFixed(2)),
+                    day_impact_value: Number(dayImpactValue.toFixed(2)),
+                    day_impact_percent: Number(dayImpactPercent.toFixed(2)),
+                    total_gain_loss_value: Number(totalGainLossValue.toFixed(2)),
+                    total_gain_loss_percent: Number(totalGainLossPercent.toFixed(2)),
+                    compliance_status: stock.compliance_status || 'unknown',
+                    sector: stock.sector || null,
+                    weight_percent: 0,
+                    alerts: [],
+                    is_day_loss_alert: false,
+                    is_concentration_alert: false
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => Math.abs(b.day_impact_value) - Math.abs(a.day_impact_value));
+
+        const totalMarketValue = items.reduce((sum, item) => sum + item.market_value, 0);
+        const totalDayImpact = items.reduce((sum, item) => sum + item.day_impact_value, 0);
+        const totalInvested = items.reduce((sum, item) => sum + (item.market_value - item.total_gain_loss_value), 0);
+        const totalGainLoss = items.reduce((sum, item) => sum + item.total_gain_loss_value, 0);
+
+        for (const item of items) {
+            const weightPercent = totalMarketValue > 0 ? (item.market_value / totalMarketValue) * 100 : 0;
+            const isDayLossAlert = item.day_impact_percent <= -dayLossAlertPercent;
+            const isConcentrationAlert = weightPercent >= concentrationAlertPercent;
+            const alerts = [];
+
+            if (isDayLossAlert) {
+                alerts.push(`هبوط يومي قوي (${Math.abs(item.day_impact_percent).toFixed(2)}%)`);
+            }
+            if (isConcentrationAlert) {
+                alerts.push(`تركيز مرتفع بالمحفظة (${weightPercent.toFixed(1)}%)`);
+            }
+
+            item.weight_percent = Number(weightPercent.toFixed(2));
+            item.is_day_loss_alert = isDayLossAlert;
+            item.is_concentration_alert = isConcentrationAlert;
+            item.alerts = alerts;
+        }
+
+        const alertItems = items.filter((item) => item.alerts.length > 0);
+
+        const topPositive = items
+            .filter((item) => item.day_impact_value > 0)
+            .sort((a, b) => b.day_impact_value - a.day_impact_value)
+            .slice(0, 3);
+
+        const topNegative = items
+            .filter((item) => item.day_impact_value < 0)
+            .sort((a, b) => a.day_impact_value - b.day_impact_value)
+            .slice(0, 3);
+
+        const losersCount = items.filter((item) => item.day_impact_value < 0).length;
+        const winnersCount = items.filter((item) => item.day_impact_value > 0).length;
+
+        let action = 'hold';
+        let action_label_ar = 'ثبّت المراكز';
+        let reason_ar = 'لا يوجد ضغط خطر واضح يستدعي تعديل قوي الآن.';
+        let confidence = 0.62;
+
+        const totalDayImpactPercent = totalMarketValue > 0 ? (totalDayImpact / totalMarketValue) * 100 : 0;
+
+        if (totalDayImpactPercent <= -2 || alertItems.length >= 2 || losersCount > winnersCount + 2) {
+            action = 'decrease_risk';
+            action_label_ar = 'خفّف المخاطر';
+            reason_ar = 'الأداء اليومي سلبي أو يوجد تركّز/هبوط مرتفع في مراكز أساسية، يفضل تقليل الانكشاف تدريجيًا.';
+            confidence = 0.78;
+        } else if (totalDayImpactPercent >= 1.2 && winnersCount >= losersCount && alertItems.length === 0) {
+            action = 'increase_gradually';
+            action_label_ar = 'زوّد تدريجيًا';
+            reason_ar = 'الزخم اليومي إيجابي مع توازن مخاطرة مقبول، يمكن زيادة المراكز على دفعات.';
+            confidence = 0.71;
+        }
+
+        res.json({
+            summary: {
+                assets_count: items.length,
+                total_market_value: Number(totalMarketValue.toFixed(2)),
+                total_invested: Number(totalInvested.toFixed(2)),
+                total_gain_loss: Number(totalGainLoss.toFixed(2)),
+                total_gain_loss_percent: totalInvested > 0
+                    ? Number(((totalGainLoss / totalInvested) * 100).toFixed(2))
+                    : 0,
+                day_impact_value: Number(totalDayImpact.toFixed(2)),
+                day_impact_percent: totalMarketValue > 0
+                    ? Number(((totalDayImpact / totalMarketValue) * 100).toFixed(2))
+                    : 0
+            },
+            thresholds: {
+                day_loss_alert_percent: dayLossAlertPercent,
+                concentration_alert_percent: concentrationAlertPercent
+            },
+            recommendation: {
+                action,
+                action_label_ar,
+                reason_ar,
+                confidence: Number(confidence.toFixed(2))
+            },
+            risk_alerts: alertItems.slice(0, 8),
+            top_positive: topPositive,
+            top_negative: topNegative,
+            items
+        });
+    } catch (error) {
+        logger.error('Get portfolio impact error:', error);
+        res.status(500).json({ detail: 'Failed to get portfolio impact feed' });
     }
 });
 

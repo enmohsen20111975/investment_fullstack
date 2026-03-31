@@ -1,12 +1,10 @@
 /**
  * Stock Model
  * Stock model representing EGX stocks and other investment instruments.
- * Contains price data, financial metrics, and Shariah compliance status.
  */
 
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../database');
-const ComplianceStatus = require('./enums/ComplianceStatus');
 const InvestmentType = require('./enums/InvestmentType');
 
 const Stock = sequelize.define('Stock', {
@@ -117,24 +115,6 @@ const Stock = sequelize.define('Stock', {
         type: DataTypes.STRING(100),
         allowNull: true
     },
-    // Shariah compliance
-    is_halal: {
-        type: DataTypes.BOOLEAN,
-        allowNull: true,
-        defaultValue: null
-    },
-    compliance_status: {
-        type: DataTypes.ENUM(...Object.values(ComplianceStatus)),
-        defaultValue: ComplianceStatus.UNKNOWN
-    },
-    compliance_note: {
-        type: DataTypes.TEXT,
-        allowNull: true
-    },
-    compliance_last_reviewed: {
-        type: DataTypes.DATE,
-        allowNull: true
-    },
     // EGX Index Membership
     egx30_member: {
         type: DataTypes.BOOLEAN,
@@ -172,10 +152,6 @@ const Stock = sequelize.define('Stock', {
         {
             name: 'ix_stocks_ticker_active',
             fields: ['ticker', 'is_active']
-        },
-        {
-            name: 'ix_stocks_compliance',
-            fields: ['compliance_status', 'is_active']
         }
     ]
 });
@@ -188,14 +164,5 @@ Stock.prototype.getPriceChange = function () {
     return null;
 };
 
-Stock.prototype.getComplianceDisplay = function () {
-    const statusMap = {
-        [ComplianceStatus.HALAL]: 'halal',
-        [ComplianceStatus.HARAM]: 'haram',
-        [ComplianceStatus.UNKNOWN]: 'unknown',
-        [ComplianceStatus.CONTROVERSIAL]: 'controversial'
-    };
-    return statusMap[this.compliance_status] || 'unknown';
-};
 
 module.exports = Stock;

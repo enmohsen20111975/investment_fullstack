@@ -108,8 +108,6 @@ const calculateScores = (stock, historySummary, trend) => {
         - (Math.max(debt - 1.0, 0) * 10)
     ));
 
-    const compliance = stock.compliance_status === 'halal' ? 100 : stock.compliance_status === 'haram' ? 10 : 60;
-
     const risk = Math.max(0, Math.min(100,
         45
         + (toNumber(historySummary.volatility_percent, 5) * 2.2)
@@ -118,26 +116,20 @@ const calculateScores = (stock, historySummary, trend) => {
     ));
 
     const total = Math.max(0, Math.min(100,
-        (technical * 0.35)
+        (technical * 0.50)
         + (fundamental * 0.30)
-        + (compliance * 0.20)
-        + ((100 - risk) * 0.15)
+        + ((100 - risk) * 0.20)
     ));
 
     return {
         total_score: total,
         technical_score: technical,
         fundamental_score: fundamental,
-        compliance_score: compliance,
         risk_score: risk
     };
 };
 
 const resolveAction = (scores, stock) => {
-    if (stock.compliance_status === 'haram') {
-        return { action: 'sell', action_ar: 'بيع', confidence_label: 'high' };
-    }
-
     const total = toNumber(scores.total_score);
 
     if (total >= 78) return { action: 'strong_buy', action_ar: 'شراء قوي', confidence_label: 'high' };
@@ -154,7 +146,6 @@ const buildStrengthsAndRisks = (stock, trend, scores) => {
     if (trend.direction === 'bullish') strengths.push({ title: 'Bullish trend', title_ar: 'اتجاه سعري صاعد' });
     if (toNumber(stock.roe) >= 12) strengths.push({ title: 'Strong profitability', title_ar: 'ربحية قوية' });
     if (toNumber(stock.debt_to_equity) <= 0.8) strengths.push({ title: 'Low leverage', title_ar: 'مستوى مديونية منخفض' });
-    if (stock.compliance_status === 'halal') strengths.push({ title: 'Shariah compliant', title_ar: 'متوافق مع الضوابط الشرعية' });
 
     if (toNumber(stock.rsi) > 75) risks.push({ title: 'Overbought RSI', title_ar: 'تشبع شرائي مرتفع (RSI)' });
     if (toNumber(stock.debt_to_equity) > 1.2) risks.push({ title: 'High debt ratio', title_ar: 'نسبة مديونية مرتفعة' });

@@ -26,7 +26,7 @@ const {
  */
 router.post('/register', async (req, res) => {
     try {
-        const { email, username, password, halal_only_preference, default_risk_tolerance } = req.body;
+        const { email, username, password, default_risk_tolerance } = req.body;
 
         // Validate input
         if (!email || !username || !password) {
@@ -60,7 +60,6 @@ router.post('/register', async (req, res) => {
             email,
             username,
             hashed_password: hashedPassword,
-            halal_only_preference: halal_only_preference || false,
             default_risk_tolerance: default_risk_tolerance || 'medium'
         });
 
@@ -147,7 +146,6 @@ router.post('/login', async (req, res) => {
                 id: user.id,
                 email: user.email,
                 username: user.username,
-                halal_only_preference: user.halal_only_preference,
                 default_risk_tolerance: user.default_risk_tolerance
             },
             api_key: rawKey
@@ -294,7 +292,6 @@ router.post('/google', async (req, res) => {
                 id: user.id,
                 email: user.email,
                 username: user.username,
-                halal_only_preference: user.halal_only_preference,
                 default_risk_tolerance: user.default_risk_tolerance
             },
             api_key: rawKey

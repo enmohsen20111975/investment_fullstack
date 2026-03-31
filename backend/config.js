@@ -76,65 +76,18 @@ const settings = {
     LOG_FILE: process.env.LOG_FILE || 'logs/app.log'
 };
 
-// Constants for Shariah compliance
-const HALAL_STOCKS = [
-    "ETEL",  // Telecom Egypt
-    "ABUK",  // Abu Qir Fertilizers
-    "JUFO",  // Juhayna Food
-    "ESRS",  // Ezz Steel Rebar
-    "MFPC",  // Misr Fertilizers
-    "SKPC",  // Sidi Kerir Petrochemicals
-    "APRI",  // Alexandria Mineral Oils
-    "ETRS",  // Egyptian Transport
-    "SWDY",  // Elsewedy Electric
-    "ORHD",  // Orascom Development
-    "AMER",  // Amer Group
-    "PIONEER",  // Pioneer Holding
-    "HELI",  // Heliopolis Housing
-    "MNHD",  // Madinet Nasr Housing
-    "OCDI",  // Orascom Construction
-    "ODIL",  // Orascom Development
-    "ESPH",  // Egyptian Starch & Yeast
-];
-
-const HARAM_STOCKS = [
-    "COMI",  // Commercial International Bank (riba-based)
-    "CIEB",  // Credit Agricole Egypt (riba-based)
-    "ETAL",  // Arab Banking Corp (riba-based)
-    "FWRY",  // Fawry (controversial - digital payments with interest)
-    "BTFH",  // B-Tech (consumer financing with interest)
-];
-
-// EGX 33 Shariah Compliant Index constituents
-const EGX_33_SHARIAH = [
-    "ETEL", "ABUK", "JUFO", "ESRS", "MFPC", "SKPC", "APRI",
-    "ETRS", "SWDY", "ORHD", "AMER", "PIONEER", "HELI", "MNHD"
-];
-
-// Compliance notes
-const COMPLIANCE_NOTES = {
-    "halal": "This investment is halal according to Shariah standards (EGX 33 Shariah Compliant).",
-    "haram": "This investment is haram due to riba (interest) or non-compliant business activities.",
-    "unknown": "Shariah compliance status is unknown. Please consult a qualified Islamic scholar.",
-    "controversial": "This investment has controversial Shariah status. Some scholars consider it halal while others consider it haram."
-};
-
-// Investment types and their default compliance
+// Investment types
 const INVESTMENT_TYPES = {
-    "stock": { "default_compliance": "unknown" },
-    "gold": { "default_compliance": "halal" },
-    "crypto": { "default_compliance": "haram" },
-    "bond": { "default_compliance": "haram" },
-    "sukuk": { "default_compliance": "halal" },
-    "reit": { "default_compliance": "unknown" },  // Depends on the REIT's activities
-    "fund": { "default_compliance": "unknown" },  // Depends on fund composition
+    "stock": {},
+    "gold": {},
+    "crypto": {},
+    "bond": {},
+    "sukuk": {},
+    "reit": {},
+    "fund": {}
 };
 
 module.exports = {
     settings,
-    HALAL_STOCKS,
-    HARAM_STOCKS,
-    EGX_33_SHARIAH,
-    COMPLIANCE_NOTES,
     INVESTMENT_TYPES
 };

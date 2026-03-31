@@ -9,6 +9,7 @@
         "build:css": "npx tailwindcss@3.4.17 -i ./frontend/css/input.css -o ./frontend/css/tailwind.css --minify",
         "watch:css": "npx tailwindcss@3.4.17 -i ./frontend/css/input.css -o ./frontend/css/tailwind.css --watch",
         "init:db": "node scripts/init_db.js",
+        "seed:egx100": "node scripts/seed_egx100_incremental.js",
         "egypt:collect": "node scripts/egypt_scraper/collectAndFormat.js",
         "egypt:analyze": "node scripts/egypt_scraper/runAnalysis.js",
         "egypt:loop": "node scripts/egypt_scraper/runLoop.js",

@@ -9,7 +9,6 @@ const { Op } = require('sequelize');
 const logger = require('../logger');
 const { Stock, StockPriceHistory, StockDeepInsightSnapshot } = require('../models');
 const { authenticateApiKey, optionalAuth } = require('../middleware/auth');
-const { HALAL_STOCKS, HARAM_STOCKS, COMPLIANCE_NOTES } = require('../config');
 const { normalizeHistory, calculateHistorySummary, buildDeepAnalysisPayload } = require('../services/deepAnalysisService');
 
 /**
@@ -22,8 +21,7 @@ const buildStockResponse = (stock) => {
 
     return {
         ...stockJson,
-        price_change: stock.getPriceChange ? stock.getPriceChange() : null,
-        compliance_display: stock.getComplianceDisplay ? stock.getComplianceDisplay() : stockJson.compliance_status
+        price_change: stock.getPriceChange ? stock.getPriceChange() : null
     };
 };
 
@@ -33,16 +31,9 @@ const buildStockResponse = (stock) => {
  */
 router.get('/', optionalAuth, async (req, res) => {
     try {
-        const { halal_only, sector, index, page = 1, page_size = 50 } = req.query;
+        const { sector, index, page = 1, page_size = 50 } = req.query;
 
         const whereClause = { is_active: true };
-
-        if (halal_only === 'true') {
-            whereClause[Op.or] = [
-                { is_halal: true },
-                { compliance_status: 'halal' }
-            ];
-        }
 
         if (sector) {
             whereClause.sector = sector;
@@ -211,7 +202,7 @@ router.get('/:ticker/recommendation', optionalAuth, async (req, res) => {
 router.get('/search/:query', optionalAuth, async (req, res) => {
     try {
         const query = req.params.query;
-        const { halal_only, sector, min_price, max_price } = req.query;
+        const { sector, min_price, max_price } = req.query;
 
         const whereClause = {
             is_active: true,
@@ -255,62 +246,6 @@ router.get('/search/:query', optionalAuth, async (req, res) => {
     } catch (error) {
         logger.error('Search stocks error:', error);
         res.status(500).json({ detail: 'Failed to search stocks' });
-    }
-});
-
-/**
- * @route GET /api/stocks/halal/list
- * @desc Get list of halal stocks
- */
-router.get('/halal/list', optionalAuth, async (req, res) => {
-    try {
-        const stocks = await Stock.findAll({
-            where: {
-                is_active: true,
-                [Op.or]: [
-                    { is_halal: true },
-                    { compliance_status: 'halal' }
-                ]
-            },
-            order: [['ticker', 'ASC']]
-        });
-
-        res.json({
-            stocks: stocks.map(buildStockResponse),
-            total: stocks.length,
-            note: COMPLIANCE_NOTES.halal
-        });
-    } catch (error) {
-        logger.error('Get halal stocks error:', error);
-        res.status(500).json({ detail: 'Failed to get halal stocks' });
-    }
-});
-
-/**
- * @route GET /api/stocks/haram/list
- * @desc Get list of haram stocks
- */
-router.get('/haram/list', optionalAuth, async (req, res) => {
-    try {
-        const stocks = await Stock.findAll({
-            where: {
-                is_active: true,
-                [Op.or]: [
-                    { is_halal: false },
-                    { compliance_status: 'haram' }
-                ]
-            },
-            order: [['ticker', 'ASC']]
-        });
-
-        res.json({
-            stocks: stocks.map(buildStockResponse),
-            total: stocks.length,
-            note: COMPLIANCE_NOTES.haram
-        });
-    } catch (error) {
-        logger.error('Get haram stocks error:', error);
-        res.status(500).json({ detail: 'Failed to get haram stocks' });
     }
 });
 

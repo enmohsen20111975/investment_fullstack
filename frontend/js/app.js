@@ -1,9 +1,9 @@
-/**
+﻿/**
  * منصة استثمار EGX - التطبيق الرئيسي
  * واجهة أمامية معيارية باستخدام Tailwind CSS
  */
 
-import apiService from '/static/js/api.js?v=2026033104';
+import apiService from '/static/js/api.js?v=2026033107';
 import {
     createStatCard,
     createBadge,
@@ -16,15 +16,15 @@ import {
     formatNumber,
     formatCurrency,
     formatDate
-} from '/static/js/modules/utils.js?v=2026033105';
+} from '/static/js/modules/utils.js?v=2026033107';
 import {
     createCandlestickChart,
     createCombinedChart,
     createAreaChart,
     destroyChart
-} from '/static/js/modules/charts.js';
-import { normalizeHistoryPayload, normalizeRecommendationPayload } from '/static/js/modules/deep-analysis.js';
-import { initializeLearningCenter } from '/static/js/modules/learning.js';
+} from '/static/js/modules/charts.js?v=2026033107';
+import { normalizeHistoryPayload, normalizeRecommendationPayload } from '/static/js/modules/deep-analysis.js?v=2026033107';
+import { initializeLearningCenter } from '/static/js/modules/learning.js?v=2026033107';
 import {
     initializeUserModule,
     userState,
@@ -45,7 +45,7 @@ import {
     deleteScheduledAdvice,
     updateUserSettings,
     showNotification
-} from '/static/js/modules/user.js?v=2026033104';
+} from '/static/js/modules/user.js?v=2026033107';
 
 // Global chart instance for cleanup
 let currentChart = null;
@@ -201,9 +201,6 @@ async function refreshActivePage({ silent = true } = {}) {
             case 'stocks':
                 await loadStocks(state.page || 1, { silent });
                 break;
-            case 'halal':
-                await loadHalalStocks({ silent });
-                break;
             case 'news':
                 await loadNewsPage({ silent });
                 break;
@@ -289,7 +286,7 @@ function navigateTo(page) {
             market: 'نظرة عامة على السوق',
             stocks: 'جميع الأسهم',
             search: 'البحث عن الأسهم',
-            halal: 'الأسهم الحلال',
+            halal: 'القائمة',
             recommendations: 'توصيات الاستثمار',
             learning: 'مركز التعلم',
             news: 'أخبار الاستثمار',
@@ -320,9 +317,6 @@ function navigateTo(page) {
             break;
         case 'stocks':
             loadStocks();
-            break;
-        case 'halal':
-            loadHalalStocks();
             break;
         case 'recommendations':
             // ا�صفحة ثابتة�R �ا حاجة ��تح�&�`� ا�أ����`
@@ -542,6 +536,16 @@ async function loadDashboard(options = {}) {
             egx30ChangeEl.innerHTML = `<i class="fas ${isUp ? 'fa-arrow-up' : 'fa-arrow-down'} text-xs ml-1"></i>${Math.abs(egx30ChangePct).toFixed(2)}%`;
         }
 
+        updateMarketPulseBar({
+            gainingCount,
+            losingCount,
+            totalStocks,
+            marketStatus: overview.market_status,
+            lastUpdated: overview.last_updated
+        });
+
+        await renderPortfolioImpactFeed();
+
         // تحد�`ث جد��� ا�رابح�`� 
         const gainersTable = document.querySelector('#gainersTable tbody');
         if (gainersTable && overview.top_gainers) {
@@ -609,6 +613,142 @@ async function loadDashboard(options = {}) {
             loading?.classList.add('hidden');
             content?.classList.remove('hidden');
         }
+    }
+}
+
+function updateMarketPulseBar({ gainingCount, losingCount, totalStocks, marketStatus, lastUpdated }) {
+    const breadthEl = document.getElementById('pulseBreadth');
+    const riskEl = document.getElementById('pulseRisk');
+    const updatedAtEl = document.getElementById('pulseUpdatedAt');
+    const sessionEl = document.getElementById('pulseSession');
+
+    if (breadthEl) {
+        const total = Math.max(1, Number(totalStocks || 0));
+        const breadthPercent = Number(((Number(gainingCount || 0) / total) * 100).toFixed(1));
+        breadthEl.textContent = `${breadthPercent}% رابح`;
+        breadthEl.className = `pulse-value ${breadthPercent >= 50 ? 'text-green-600' : 'text-red-600'}`;
+    }
+
+    if (riskEl) {
+        const gain = Number(gainingCount || 0);
+        const loss = Number(losingCount || 0);
+        const riskLabel = loss > gain ? 'مرتفعة' : (loss === gain ? 'متوازنة' : 'منخفضة');
+        riskEl.textContent = riskLabel;
+        riskEl.className = `pulse-value ${riskLabel === 'مرتفعة' ? 'text-red-600' : (riskLabel === 'متوازنة' ? 'text-amber-600' : 'text-green-600')}`;
+    }
+
+    if (updatedAtEl) {
+        const d = lastUpdated ? new Date(lastUpdated) : new Date();
+        updatedAtEl.textContent = d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    if (sessionEl) {
+        const isOpen = marketStatus?.is_open;
+        sessionEl.textContent = isOpen ? 'مفتوح' : 'مغلق';
+        sessionEl.className = `pulse-value ${isOpen ? 'text-emerald-600' : 'text-slate-600'}`;
+    }
+}
+
+async function renderPortfolioImpactFeed() {
+    const container = document.getElementById('portfolioImpactFeed');
+    if (!container) {
+        return;
+    }
+
+    if (!apiService.getApiKey()) {
+        container.innerHTML = '<div class="text-sm text-gray-500">سجّل الدخول ثم أضف أصولك لرؤية التأثير اليومي على محفظتك.</div>';
+        return;
+    }
+
+    try {
+        const payload = await apiService.getPortfolioImpact();
+        const summary = payload.summary || {};
+        const items = payload.items || [];
+        const topPositive = payload.top_positive || [];
+        const topNegative = payload.top_negative || [];
+        const recommendation = payload.recommendation || {};
+        const riskAlerts = payload.risk_alerts || [];
+
+        if (!items.length) {
+            container.innerHTML = '<div class="text-sm text-gray-500">لا توجد أصول مرتبطة بأسهم بعد. أضف أصولك من صفحة محفظتي لتفعيل الملخص اليومي.</div>';
+            return;
+        }
+
+        const dayUp = Number(summary.day_impact_value || 0) >= 0;
+
+        const renderList = (list, cls) => {
+            if (!list.length) {
+                return '<div class="text-xs text-gray-500">لا توجد عناصر</div>';
+            }
+            return list.map(item => `
+                <div class="flex items-center justify-between py-1 border-b border-gray-100 last:border-b-0">
+                    <button class="text-sm text-blue-700 hover:text-blue-800 text-right" onclick="showStockDetail('${item.ticker}')">${item.ticker} - ${item.name_ar || '-'}</button>
+                    <span class="text-sm font-semibold ${cls}">${item.day_impact_value >= 0 ? '+' : ''}${formatNumber(item.day_impact_value, 2)} جنيه</span>
+                </div>
+            `).join('');
+        };
+
+        const actionClass = `action-${(recommendation.action || 'hold').replace('_', '-')}`;
+
+        const renderAlerts = () => {
+            if (!riskAlerts.length) {
+                return '<div class="text-xs text-gray-500">لا توجد تنبيهات مخاطرة حرجة الآن.</div>';
+            }
+            return riskAlerts.slice(0, 5).map(item => `
+                <div class="flex flex-wrap items-center justify-between gap-2 py-1.5 border-b border-gray-100 last:border-b-0">
+                    <button class="text-sm text-red-700 hover:text-red-800 text-right font-medium" onclick="showStockDetail('${item.ticker}')">${item.ticker} - ${item.name_ar || '-'}</button>
+                    <div class="flex flex-wrap gap-1.5">
+                        ${(item.alerts || []).map(a => `<span class="alert-chip warn"><i class="fas fa-exclamation-triangle text-[10px]"></i>${a}</span>`).join('')}
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        container.innerHTML = `
+            <div class="professional-callout ${actionClass} mb-4">
+                <div class="flex items-center justify-between gap-3 mb-1">
+                    <div class="text-sm font-semibold text-gray-900">توصية اليوم: ${recommendation.action_label_ar || 'ثبّت المراكز'}</div>
+                    <div class="text-xs text-gray-600">ثقة ${(Number(recommendation.confidence || 0.6) * 100).toFixed(0)}%</div>
+                </div>
+                <div class="text-sm text-gray-700">${recommendation.reason_ar || 'راقب توازن المحفظة ووزّع المخاطر قبل أي زيادة.'}</div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div class="text-xs text-gray-500 mb-1">القيمة السوقية</div>
+                    <div class="text-lg font-semibold text-gray-900">${formatNumber(summary.total_market_value || 0, 2)} جنيه</div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div class="text-xs text-gray-500 mb-1">أثر اليوم</div>
+                    <div class="text-lg font-semibold ${dayUp ? 'text-green-600' : 'text-red-600'}">
+                        ${dayUp ? '+' : ''}${formatNumber(summary.day_impact_value || 0, 2)} جنيه
+                        <span class="text-sm">(${Math.abs(Number(summary.day_impact_percent || 0)).toFixed(2)}%)</span>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div class="text-xs text-gray-500 mb-1">إجمالي الربح/الخسارة</div>
+                    <div class="text-lg font-semibold ${(Number(summary.total_gain_loss || 0) >= 0) ? 'text-green-600' : 'text-red-600'}">
+                        ${(Number(summary.total_gain_loss || 0) >= 0) ? '+' : ''}${formatNumber(summary.total_gain_loss || 0, 2)} جنيه
+                    </div>
+                </div>
+            </div>
+            <div class="rounded-lg border border-rose-200 bg-rose-50/30 p-3 mb-4">
+                <div class="text-sm font-semibold text-rose-700 mb-2">تنبيهات مخاطرة مباشرة</div>
+                ${renderAlerts()}
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="rounded-lg border border-green-200 bg-green-50/40 p-3">
+                    <div class="text-sm font-semibold text-green-700 mb-2">أكثر الأسهم دعمًا للمحفظة اليوم</div>
+                    ${renderList(topPositive, 'text-green-700')}
+                </div>
+                <div class="rounded-lg border border-red-200 bg-red-50/40 p-3">
+                    <div class="text-sm font-semibold text-red-700 mb-2">أكثر الأسهم ضغطًا على المحفظة اليوم</div>
+                    ${renderList(topNegative, 'text-red-700')}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Failed to render portfolio impact feed:', error);
+        container.innerHTML = '<div class="text-sm text-amber-600">تعذر تحميل أثر المحفظة الآن. جرّب مرة أخرى.</div>';
     }
 }
 
@@ -844,60 +984,6 @@ async function performSearch() {
     }
 }
 
-// ==================== ا�أس�!�& ا�ح�ا� ====================
-async function loadHalalStocks(options = {}) {
-    const { silent = false } = options;
-    const pageLoading = document.getElementById('halalPageLoading');
-    const pageContent = document.getElementById('halalPageContent');
-    const loading = document.getElementById('halalLoading');
-    const tableBody = document.querySelector('#halalTable tbody');
-
-    try {
-        // Show page loading indicator
-        if (!silent) {
-            pageLoading?.classList.remove('hidden');
-            pageContent?.classList.add('hidden');
-        }
-
-        const response = await apiService.getHalalStocks();
-
-        if (response.stocks && response.stocks.length > 0) {
-            tableBody.innerHTML = response.stocks.map(stock => `
-                <tr class="hover:bg-gray-50 cursor-pointer" onclick="showStockDetail('${stock.ticker}')">
-                    <td class="px-4 py-3 font-medium text-blue-600">${stock.ticker}</td>
-                    <td class="px-4 py-3 text-gray-900">${stock.name || '-'}</td>
-                    <td class="px-4 py-3 font-medium">${stock.current_price ? formatCurrency(stock.current_price) : '-'}</td>
-                    <td class="px-4 py-3 text-gray-500">${stock.sector || '-'}</td>
-                    <td class="px-4 py-3 text-sm text-gray-600">
-                        <div class="flex items-center gap-2">
-                            <span>${stock.compliance_note || 'متوافق مع الشريعة'}</span>
-                            <button class="px-2 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
-                                onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
-                                متابعة
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        } else {
-            tableBody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد أسهم حلال</td></tr>';
-        }
-        
-        // Show content, hide loading
-        if (!silent) {
-            pageLoading?.classList.add('hidden');
-            pageContent?.classList.remove('hidden');
-        }
-
-    } catch (error) {
-        console.error('خطأ في تحميل الأسهم الحلال:', error);
-        if (!silent) {
-            tableBody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-red-500">فشل التحميل: ${error.message}</td></tr>`;
-            pageLoading?.classList.add('hidden');
-            pageContent?.classList.remove('hidden');
-        }
-    }
-}
 
 // ==================== ا�ت��ص�`ات ====================
 async function getRecommendations() {
@@ -905,7 +991,6 @@ async function getRecommendations() {
     const risk = document.getElementById('riskSelect')?.value || 'medium';
     const maxStocks = parseInt(document.getElementById('maxStocksInput')?.value) || 10;
     const sectors = document.getElementById('sectorsInput')?.value;
-    const halalOnly = document.getElementById('recommendHalalOnly')?.checked;
 
     const resultContainer = document.getElementById('recommendationsResult');
     resultContainer.innerHTML = `
@@ -921,7 +1006,6 @@ async function getRecommendations() {
             risk,
             max_stocks: maxStocks,
             sectors: sectors || undefined,
-            halal_only: halalOnly,
         });
 
         if (response.recommendations && response.recommendations.length > 0) {
@@ -1941,7 +2025,6 @@ async function loadSettingsPage() {
         if (settings) {
             document.getElementById('settingsEmail').value = userState.user?.email || '';
             document.getElementById('settingsUsername').value = userState.user?.username || '';
-            document.getElementById('settingsHalalOnly').checked = userState.user?.halal_only_preference || false;
             document.getElementById('settingsRiskTolerance').value = userState.user?.default_risk_tolerance || 'medium';
         }
     } catch (error) {
@@ -2057,7 +2140,6 @@ document.getElementById('newAssetForm')?.addEventListener('submit', async (e) =>
         quantity: parseFloat(document.getElementById('assetQuantity').value),
         purchase_price: parseFloat(document.getElementById('assetPurchasePrice').value),
         purchase_date: document.getElementById('assetPurchaseDate').value || null,
-        is_halal: document.getElementById('assetIsHalal').checked,
         notes: document.getElementById('assetNotes').value || null
     };
 
@@ -2182,7 +2264,6 @@ document.getElementById('settingsForm')?.addEventListener('submit', async (e) =>
     e.preventDefault();
     
     const settingsData = {
-        halal_only_preference: document.getElementById('settingsHalalOnly').checked,
         default_risk_tolerance: document.getElementById('settingsRiskTolerance').value
     };
 
