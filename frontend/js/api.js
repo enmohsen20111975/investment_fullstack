@@ -226,6 +226,13 @@ class ApiService {
         return this.request('/market/overview');
     }
 
+    async getGeminiAssistantDecision(payload = {}) {
+        return this.request('/market/recommendations/gemini-assistant', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    }
+
     /**
      * Get market indices
      * @returns {Promise<Object>} Market indices

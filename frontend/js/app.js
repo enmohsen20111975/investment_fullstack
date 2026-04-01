@@ -1046,12 +1046,29 @@ async function getRecommendations() {
             sectors: sectors || undefined,
         });
 
+        let assistantPayload = null;
+        try {
+            assistantPayload = await apiService.getGeminiAssistantDecision({
+                capital,
+                risk,
+                max_stocks: maxStocks,
+                sectors: sectors || undefined
+            });
+        } catch (assistantError) {
+            console.warn('Gemini assistant unavailable:', assistantError.message);
+        }
+
         if (response.recommendations && response.recommendations.length > 0) {
             const riskText = {
                 'low': 'منخفض',
                 'medium': 'متوسط',
                 'high': 'عالٍ'
             };
+
+            const deterministic = assistantPayload?.deterministic_advice;
+            const probabilities = deterministic?.market_probabilities;
+            const holdingsActions = deterministic?.what_to_do_with_holdings || [];
+            const buyNow = deterministic?.what_to_buy_now || [];
 
             resultContainer.innerHTML = `
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -1090,6 +1107,56 @@ async function getRecommendations() {
                                 </div>
                             `).join('')}
                         </div>
+                    </div>
+                ` : ''}
+
+                ${(assistantPayload?.gemini_response || deterministic) ? `
+                    <div class="mt-6 bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                        <h3 class="font-semibold text-gray-900 mb-4">المحلل الذكي للسوق (Gemini)</h3>
+
+                        ${buyNow.length ? `
+                            <div class="mb-5">
+                                <h4 class="text-sm font-semibold text-emerald-700 mb-2">1) أشتري في مين الآن؟</h4>
+                                <div class="space-y-2">
+                                    ${buyNow.slice(0, 5).map(item => `
+                                        <div class="text-sm text-gray-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+                                            ${item.ticker} - درجة ${Number(item.score || 0).toFixed(1)} (${item.reason || ''})
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${holdingsActions.length ? `
+                            <div class="mb-5">
+                                <h4 class="text-sm font-semibold text-blue-700 mb-2">2) أعمل إيه في الأسهم اللي معايا؟</h4>
+                                <div class="space-y-2">
+                                    ${holdingsActions.slice(0, 10).map(item => `
+                                        <div class="text-sm text-gray-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                                            ${item.ticker}: ${item.action} | متوسط تكلفة ${Number(item.avg_cost || 0).toFixed(2)} | ربح/خسارة ${Number(item.pnl_percent || 0).toFixed(2)}%
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${probabilities ? `
+                            <div class="mb-5">
+                                <h4 class="text-sm font-semibold text-amber-700 mb-2">3) الاحتمالات بناء على الأخبار وحركة السوق</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">صعود: <strong>${Number(probabilities.bullish_probability || 0).toFixed(1)}%</strong></div>
+                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">عرضي: <strong>${Number(probabilities.neutral_probability || 0).toFixed(1)}%</strong></div>
+                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">هبوط: <strong>${Number(probabilities.bearish_probability || 0).toFixed(1)}%</strong></div>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        ${assistantPayload?.gemini_response ? `
+                            <div class="mt-4 p-4 rounded-lg border border-purple-200 bg-purple-50">
+                                <h4 class="text-sm font-semibold text-purple-700 mb-2">تحليل Gemini النصي</h4>
+                                <div class="text-sm text-gray-700 whitespace-pre-line">${assistantPayload.gemini_response}</div>
+                            </div>
+                        ` : ''}
                     </div>
                 ` : ''}
             `;
@@ -1350,13 +1417,19 @@ async function loadWatchlistPage() {
 
         document.getElementById('watchlistTableContainer')?.classList.remove('hidden');
         const tbody = document.getElementById('watchlistTableBody');
-        tbody.innerHTML = sortedWatchlist.map(item => `
+        tbody.innerHTML = sortedWatchlist.map(item => {
+            const ticker = item?.ticker || item?.stock?.ticker || '-';
+            const stockName = item?.stock_name || item?.stock?.name_ar || item?.stock?.name || '-';
+            const currentPrice = item?.current_price ?? item?.stock?.current_price ?? null;
+            const priceChange = item?.price_change ?? (item?.stock?.price_change ?? null);
+
+            return `
             <tr class="border-b border-gray-100 hover:bg-gray-50">
-                <td class="px-6 py-4 font-medium text-gray-900">${item.ticker}</td>
-                <td class="px-6 py-4 text-gray-600">${item.stock_name || '-'}</td>
-                <td class="px-6 py-4">${formatCurrency(item.current_price)}</td>
-                <td class="px-6 py-4 ${item.price_change >= 0 ? 'text-green-600' : 'text-red-600'}">
-                    ${item.price_change ? (item.price_change >= 0 ? '+' : '') + item.price_change.toFixed(2) + '%' : '-'}
+                <td class="px-6 py-4 font-medium text-gray-900">${ticker}</td>
+                <td class="px-6 py-4 text-gray-600">${stockName}</td>
+                <td class="px-6 py-4">${currentPrice ? formatCurrency(currentPrice) : '-'}</td>
+                <td class="px-6 py-4 ${(priceChange ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}">
+                    ${priceChange !== null && priceChange !== undefined ? ((priceChange >= 0 ? '+' : '') + Number(priceChange).toFixed(2) + '%') : '-'}
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500">
                     ${item.alert_price_above ? `أعلى من ${item.alert_price_above}` : ''}
@@ -1370,7 +1443,8 @@ async function loadWatchlistPage() {
                     </button>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
     } catch (error) {
         console.error('خطأ في تحميل قائمة المراقبة:', error);
         showNotification('فشل تحميل قائمة المراقبة', 'danger');

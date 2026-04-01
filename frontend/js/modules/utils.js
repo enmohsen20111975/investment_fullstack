@@ -165,18 +165,23 @@ export function createStockTableRow(stock) {
  * @returns {string} نص HTML
  */
 export function createRecommendationCard(recommendation, capital) {
-    const amount = (recommendation.allocation / 100) * capital;
+    const allocationPercent = Number(
+        recommendation.allocation_percent ?? recommendation.allocation ?? 0
+    );
+    const amount = recommendation.allocation_amount !== undefined
+        ? Number(recommendation.allocation_amount)
+        : ((allocationPercent / 100) * Number(capital || 0));
 
     return `
         <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all cursor-pointer">
             <div>
                 <h4 class="font-semibold text-gray-900">${recommendation.ticker}</h4>
                 <p class="text-sm text-gray-500">${recommendation.name || recommendation.sector || 'غير محدد'}</p>
-                ${recommendation.compliance_note ? `<p class="text-xs text-gray-400 mt-1">${recommendation.compliance_note}</p>` : ''}
+                ${recommendation.score !== undefined ? `<p class="text-xs text-gray-400 mt-1">درجة التحليل: ${Number(recommendation.score).toFixed(1)}</p>` : ''}
             </div>
             <div class="text-left">
-                <div class="text-xl font-semibold text-blue-600">${recommendation.allocation.toFixed(1)}%</div>
-                <div class="text-sm text-gray-500">${amount.toFixed(0)} جنيه</div>
+                <div class="text-xl font-semibold text-blue-600">${allocationPercent.toFixed(1)}%</div>
+                <div class="text-sm text-gray-500">${Number(amount || 0).toFixed(0)} جنيه</div>
             </div>
         </div>
     `;

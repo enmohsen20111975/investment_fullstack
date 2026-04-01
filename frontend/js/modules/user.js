@@ -141,10 +141,6 @@ function createAuthModal() {
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تأكيد كلمة المرور</label>
                         <input type="password" id="registerPasswordConfirm" required class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white" placeholder="أعد كتابة كلمة المرور">
                     </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" id="registerHalalOnly" class="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500">
-                        <label for="registerHalalOnly" class="mr-2 text-sm text-gray-700 dark:text-gray-300">تفضيل الاستثمار الحلال فقط</label>
-                    </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">تحمل المخاطر</label>
                         <select id="registerRiskTolerance" class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white">
@@ -405,7 +401,6 @@ async function handleRegister(e) {
     const username = document.getElementById('registerUsername').value;
     const password = document.getElementById('registerPassword').value;
     const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
-    const halalOnly = document.getElementById('registerHalalOnly').checked;
     const riskTolerance = document.getElementById('registerRiskTolerance').value;
     const errorEl = document.getElementById('registerError');
     
@@ -421,7 +416,6 @@ async function handleRegister(e) {
             email: email,
             username: username,
             password: password,
-            halal_only_preference: halalOnly,
             default_risk_tolerance: riskTolerance
         });
         

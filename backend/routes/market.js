@@ -6,9 +6,11 @@
 const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
+const axios = require('axios');
 const logger = require('../logger');
-const { Stock, MarketIndex, MarketUpdateStatus } = require('../models');
-const { authenticateApiKey, optionalAuth } = require('../middleware/auth');
+const { Stock, MarketIndex, MarketUpdateStatus, UserAsset } = require('../models');
+const { authenticateApiKey, optionalAuth, requireUser } = require('../middleware/auth');
+const { settings } = require('../config');
 const { getMarketStatus: getScheduleStatus, shouldAllowUpdate, getCairoTime } = require('../services/marketScheduleService');
 const { updateStockData, getLastUpdate, getUpdateHistory, checkDataNeedsRefresh } = require('../services/dataUpdateService');
 
@@ -90,6 +92,105 @@ function buildMarketAiPrompt(payload) {
         'Stock statuses (top by score):',
         JSON.stringify(payload.stock_statuses.slice(0, 20), null, 2)
     ].join('\n');
+}
+
+async function buildPortfolioLots(userId) {
+    const assets = await UserAsset.findAll({
+        where: {
+            user_id: userId,
+            is_active: true,
+            asset_type: 'stock',
+            quantity: { [Op.gt]: 0 }
+        },
+        include: [{
+            model: Stock,
+            as: 'stock',
+            required: false
+        }],
+        order: [['purchase_date', 'ASC']]
+    });
+
+    const byTicker = new Map();
+    for (const asset of assets) {
+        const ticker = (asset.asset_ticker || asset.stock?.ticker || '').toUpperCase();
+        if (!ticker) continue;
+
+        const qty = toNumber(asset.quantity, 0);
+        const buyPrice = toNumber(asset.purchase_price, 0);
+        const currentPrice = toNumber(asset.stock?.current_price, toNumber(asset.current_price, buyPrice));
+        if (qty <= 0) continue;
+
+        if (!byTicker.has(ticker)) {
+            byTicker.set(ticker, {
+                ticker,
+                name: asset.stock?.name_ar || asset.stock?.name || asset.asset_name || ticker,
+                total_qty: 0,
+                total_cost: 0,
+                current_price: currentPrice,
+                lots_count: 0
+            });
+        }
+
+        const row = byTicker.get(ticker);
+        row.total_qty += qty;
+        row.total_cost += qty * buyPrice;
+        row.current_price = currentPrice || row.current_price;
+        row.lots_count += 1;
+    }
+
+    return Array.from(byTicker.values()).map((row) => {
+        const avgCost = row.total_qty > 0 ? (row.total_cost / row.total_qty) : 0;
+        const marketValue = row.total_qty * row.current_price;
+        const pnlValue = marketValue - row.total_cost;
+        const pnlPercent = avgCost > 0 ? ((row.current_price - avgCost) / avgCost) * 100 : 0;
+
+        return {
+            ...row,
+            avg_cost: Number(avgCost.toFixed(4)),
+            market_value: Number(marketValue.toFixed(2)),
+            pnl_value: Number(pnlValue.toFixed(2)),
+            pnl_percent: Number(pnlPercent.toFixed(2))
+        };
+    });
+}
+
+function buildDeterministicAdvice(insights, lots) {
+    const topBuy = (insights.stock_statuses || []).slice(0, 5).map((s) => ({
+        ticker: s.ticker,
+        score: s.score,
+        reason: s.status === 'strong' ? 'زخم وسيولة جيدان' : 'تحسن نسبي'
+    }));
+
+    const holdingsActions = (lots || []).map((lot) => {
+        const stockStatus = (insights.stock_statuses || []).find((s) => s.ticker === lot.ticker);
+        const score = stockStatus?.score ?? 50;
+
+        let action = 'احتفاظ';
+        if (score >= 70 && lot.pnl_percent < 0) action = 'تعزيز تدريجي';
+        else if (score < 45 && lot.pnl_percent > 8) action = 'تخفيف/جني أرباح';
+        else if (score < 40 && lot.pnl_percent < -10) action = 'تقليل المخاطر';
+
+        return {
+            ticker: lot.ticker,
+            avg_cost: lot.avg_cost,
+            current_price: lot.current_price,
+            pnl_percent: lot.pnl_percent,
+            score,
+            action
+        };
+    });
+
+    const scenario = {
+        bullish_probability: Number((clamp(insights.market_score / 100, 0, 1) * 100).toFixed(1)),
+        neutral_probability: Number((clamp(1 - Math.abs((insights.market_score - 50) / 100), 0, 1) * 100).toFixed(1)),
+        bearish_probability: Number((clamp((100 - insights.market_score) / 100, 0, 1) * 100).toFixed(1))
+    };
+
+    return {
+        what_to_buy_now: topBuy,
+        what_to_do_with_holdings: holdingsActions,
+        market_probabilities: scenario
+    };
 }
 
 /**
@@ -517,6 +618,82 @@ router.get('/recommendations/ai-insights', authenticateApiKey, async (req, res) 
     } catch (error) {
         logger.error('Get AI insights error:', error);
         res.status(500).json({ detail: 'Failed to get AI insights' });
+    }
+});
+
+/**
+ * @route POST /api/market/recommendations/gemini-assistant
+ * @desc Gemini-based actionable assistant using market calculations and user holdings lots
+ */
+router.post('/recommendations/gemini-assistant', authenticateApiKey, requireUser, async (req, res) => {
+    try {
+        const insightsResp = await (async () => {
+            const stocks = await Stock.findAll({ where: { is_active: true, is_egx: true } });
+            const gainers = stocks.filter(s => s.getPriceChange && s.getPriceChange() > 0).length;
+            const losers = stocks.filter(s => s.getPriceChange && s.getPriceChange() < 0).length;
+            const unchanged = Math.max(0, stocks.length - gainers - losers);
+            const breadth = stocks.length ? (gainers / stocks.length) * 100 : 0;
+            const avgChange = stocks.length ? stocks.reduce((sum, s) => sum + toNumber(s.getPriceChange ? s.getPriceChange() : 0, 0), 0) / stocks.length : 0;
+            const volatility = stocks.length ? stocks.reduce((sum, s) => sum + Math.abs(toNumber(s.getPriceChange ? s.getPriceChange() : 0, 0)), 0) / stocks.length : 0;
+            const marketScore = clamp((breadth * 0.45) + ((avgChange + 5) * 10 * 0.30) + ((100 - (volatility * 10)) * 0.25), 0, 100);
+            const stockStatuses = stocks.map(calculateStockStatus).sort((a, b) => b.score - a.score);
+
+            return {
+                market_sentiment: marketScore >= 65 ? 'bullish' : (marketScore <= 40 ? 'bearish' : 'neutral'),
+                market_score: Number(marketScore.toFixed(2)),
+                market_breadth: Number(breadth.toFixed(2)),
+                gainers,
+                losers,
+                unchanged,
+                top_sectors: [],
+                stock_statuses: stockStatuses
+            };
+        })();
+
+        const lots = await buildPortfolioLots(req.user.id);
+        const baseAdvice = buildDeterministicAdvice(insightsResp, lots);
+
+        const userPrompt = [
+            buildMarketAiPrompt(insightsResp),
+            'User portfolio lots (same ticker can have multiple buys merged with weighted average cost):',
+            JSON.stringify(lots, null, 2),
+            'Answer in Arabic and cover strictly:',
+            '1) اشتري في مين الآن',
+            '2) اعمل ايه في الاسهم اللي معايا',
+            '3) الاحتمالات بناء على الأخبار وحركة السوق',
+            'Return concise actionable bullets with risk notes.'
+        ].join('\n');
+
+        let geminiText = null;
+        if (settings.GEMINI_API_KEY) {
+            try {
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${settings.GEMINI_MODEL}:generateContent?key=${settings.GEMINI_API_KEY}`;
+                const geminiResponse = await axios.post(geminiUrl, {
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                    generationConfig: {
+                        temperature: 0.2,
+                        topP: 0.9,
+                        maxOutputTokens: 1200
+                    }
+                }, { timeout: 30000 });
+
+                geminiText = geminiResponse?.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+            } catch (geminiError) {
+                logger.warn('Gemini call failed, fallback to deterministic advice:', geminiError.message);
+            }
+        }
+
+        res.json({
+            market_insights: insightsResp,
+            portfolio_lots: lots,
+            deterministic_advice: baseAdvice,
+            gemini_response: geminiText,
+            used_model: settings.GEMINI_MODEL,
+            generated_at: new Date().toISOString()
+        });
+    } catch (error) {
+        logger.error('Gemini assistant error:', error);
+        res.status(500).json({ detail: 'Failed to generate Gemini assistant advice' });
     }
 });
 

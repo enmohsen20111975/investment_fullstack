@@ -51,6 +51,10 @@ const settings = {
     TOGETHER_API_KEY: process.env.TOGETHER_API_KEY || 'key_CUJoQk5chstN2WCQmjzJT',
     TOGETHER_MODEL: process.env.TOGETHER_MODEL || 'Qwen3-Next-80B-A3B-Instruct',
 
+    // Gemini for AI assistant
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY || 'AIzaSyAd-S2NjKR86Cb3mnd49a1JIM44apgNirQ',
+    GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+
     // User API Key for authentication
     USER_API_KEY: process.env.USER_API_KEY || '2a04bb8e3a549176ed4b52f0ea632fc463de859581d8e2adbc1298cc1783548e',
 
