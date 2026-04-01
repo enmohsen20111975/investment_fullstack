@@ -375,8 +375,7 @@
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">التغير</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الامتثال
-                                        </th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">إجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -398,8 +397,7 @@
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">التغير</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الامتثال
-                                        </th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">إجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -435,8 +433,7 @@
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
                                         <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الحجم</th>
-                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">الامتثال
-                                        </th>
+                                        <th class="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">إجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -456,22 +453,45 @@
                     <!-- محتوى صفحة الأسهم -->
                     <div id="stocksPageContent" class="hidden">
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                            <h3 class="font-semibold text-gray-900">جميع الأسهم</h3>
-                                                            <select id="indexFilter"
-                                                                class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
-                                                                <option value="">جميع المؤشرات</option>
-                                                                <option value="egx30">EGX 30</option>
-                                                                <option value="egx70">EGX 70</option>
-                                                                <option value="egx100">EGX 100</option>
-                                                            </select>
-                            <div class="flex items-center gap-4">
-                                <select id="sectorFilter"
-                                    class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
-                                    <option value="">جميع القطاعات</option>
-                                </select>
-                                <label class="flex items-center gap-2 text-sm text-gray-600">
-                                </label>
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                                <h3 class="font-semibold text-gray-900">جميع الأسهم</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 w-full lg:w-auto">
+                                    <input id="stockQuickSearch" type="text" placeholder="ابحث بالاسم أو الرمز أو القطاع"
+                                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                                    <select id="stockSearchField"
+                                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                                        <option value="all">كل الحقول</option>
+                                        <option value="symbol">الرمز</option>
+                                        <option value="name">الاسم</option>
+                                        <option value="sector">القطاع</option>
+                                        <option value="index">المؤشر</option>
+                                    </select>
+                                    <select id="indexFilter"
+                                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                                        <option value="">جميع المؤشرات</option>
+                                        <option value="egx30">EGX 30</option>
+                                        <option value="egx70">EGX 70</option>
+                                        <option value="egx100">EGX 100</option>
+                                    </select>
+                                    <select id="sectorFilter"
+                                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                                        <option value="">جميع القطاعات</option>
+                                    </select>
+                                    <select id="stockSortField"
+                                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                                        <option value="ticker">فرز: الرمز</option>
+                                        <option value="name">فرز: الاسم</option>
+                                        <option value="current_price">فرز: السعر</option>
+                                        <option value="price_change">فرز: التغير</option>
+                                        <option value="sector">فرز: القطاع</option>
+                                    </select>
+                                    <select id="stockSortDir"
+                                        class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                                        <option value="asc">تصاعدي</option>
+                                        <option value="desc">تنازلي</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div class="hidden flex items-center justify-center py-12" id="stocksLoading">
@@ -532,7 +552,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+                            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mt-4">
                                 <div>
                                     <label class="text-sm text-gray-500 block mb-1">الحد الأدنى للسعر</label>
                                     <select id="minPrice"
@@ -557,7 +577,23 @@
                                         <option value="10000">10,000 جنيه</option>
                                     </select>
                                 </div>
-                                <div class="flex items-end">
+                                <div>
+                                    <label class="text-sm text-gray-500 block mb-1">حقل الفرز</label>
+                                    <select id="searchSortField"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                        <option value="ticker">الرمز</option>
+                                        <option value="name">الاسم</option>
+                                        <option value="current_price">السعر</option>
+                                        <option value="sector">القطاع</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-sm text-gray-500 block mb-1">اتجاه الفرز</label>
+                                    <select id="searchSortDir"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                        <option value="asc">تصاعدي</option>
+                                        <option value="desc">تنازلي</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>

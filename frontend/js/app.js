@@ -59,7 +59,6 @@ const LIVE_REFRESH_INTERVALS_MS = {
     dashboard: 15000,
     market: 15000,
     stocks: 20000,
-    halal: 30000,
     news: 45000
 };
 
@@ -78,6 +77,43 @@ const portfolioUiState = {
     stocksLoaded: false,
     stockOptions: []
 };
+
+function getComparableValue(item, field) {
+    if (!item) return '';
+
+    const valueMap = {
+        name: item.name_ar || item.name || item.stock_name || item.asset_name || item.title || '',
+        symbol: item.ticker || item.asset_ticker || '',
+        index: item.egx30_member ? 'egx30' : (item.egx70_member ? 'egx70' : (item.egx100_member ? 'egx100' : '')),
+    };
+
+    const raw = valueMap[field] ?? item[field] ?? '';
+    if (raw === null || raw === undefined) return '';
+
+    if (field === 'transaction_date' || field === 'scheduled_time' || field === 'created_at' || field === 'updated_at') {
+        const ts = Date.parse(raw);
+        return Number.isNaN(ts) ? 0 : ts;
+    }
+
+    const asNumber = Number(raw);
+    if (typeof raw === 'number' || (!Number.isNaN(asNumber) && String(raw).trim() !== '')) {
+        return asNumber;
+    }
+
+    return String(raw).toLowerCase();
+}
+
+function sortItems(items, field, direction = 'asc') {
+    if (!Array.isArray(items)) return [];
+    const dir = direction === 'desc' ? -1 : 1;
+    return [...items].sort((a, b) => {
+        const aVal = getComparableValue(a, field);
+        const bVal = getComparableValue(b, field);
+        if (aVal < bVal) return -1 * dir;
+        if (aVal > bVal) return 1 * dir;
+        return 0;
+    });
+}
 
 async function addTickerToWatchlist(ticker) {
     if (!ticker) return;
@@ -287,7 +323,6 @@ function navigateTo(page) {
             market: 'نظرة عامة على السوق',
             stocks: 'جميع الأسهم',
             search: 'البحث عن الأسهم',
-            halal: 'القائمة',
             recommendations: 'توصيات الاستثمار',
             learning: 'مركز التعلم',
             news: 'أخبار الاستثمار',
@@ -374,7 +409,13 @@ function initializeEventListeners() {
     // ف�اتر صفحة ا�أس�!�&
     document.getElementById('indexFilter')?.addEventListener('change', () => loadStocks(1));
     document.getElementById('sectorFilter')?.addEventListener('change', () => loadStocks(1));
-    document.getElementById('halalOnlyFilter')?.addEventListener('change', () => loadStocks(1));
+    document.getElementById('stockSearchField')?.addEventListener('change', () => loadStocks(1));
+    document.getElementById('stockQuickSearch')?.addEventListener('input', () => loadStocks(1));
+    document.getElementById('stockQuickSearch')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') loadStocks(1);
+    });
+    document.getElementById('stockSortField')?.addEventListener('change', () => loadStocks(1));
+    document.getElementById('stockSortDir')?.addEventListener('change', () => loadStocks(1));
     document.getElementById('prevPage')?.addEventListener('click', () => loadStocks(state.page - 1));
     document.getElementById('nextPage')?.addEventListener('click', () => loadStocks(state.page + 1));
 
@@ -383,6 +424,8 @@ function initializeEventListeners() {
     document.getElementById('searchQuery')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') performSearch();
     });
+    document.getElementById('searchSortField')?.addEventListener('change', performSearch);
+    document.getElementById('searchSortDir')?.addEventListener('change', performSearch);
 
     // ا�ت��ص�`ات
     document.getElementById('getRecommendationsBtn')?.addEventListener('click', getRecommendations);
@@ -560,13 +603,10 @@ async function loadDashboard(options = {}) {
                         ${stock.price_change?.toFixed(2) || '0.00'}
                     </td>
                     <td class="px-4 py-3">
-                        <div class="flex items-center gap-2">
-                            ${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}
-                            <button class="px-2 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
-                                onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
-                                متابعة
-                            </button>
-                        </div>
+                        <button class="px-2 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                            onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
+                            متابعة
+                        </button>
                     </td>
                 </tr>
             `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد بيانات متاحة</td></tr>';
@@ -585,13 +625,10 @@ async function loadDashboard(options = {}) {
                         ${Math.abs(stock.price_change || 0).toFixed(2)}
                     </td>
                     <td class="px-4 py-3">
-                        <div class="flex items-center gap-2">
-                            ${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}
-                            <button class="px-2 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
-                                onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
-                                متابعة
-                            </button>
-                        </div>
+                        <button class="px-2 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                            onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
+                            متابعة
+                        </button>
                     </td>
                 </tr>
             `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد بيانات متاحة</td></tr>';
@@ -791,13 +828,10 @@ async function loadMarketOverview(options = {}) {
                     <td class="px-4 py-3 font-medium">${stock.current_price ? formatCurrency(stock.current_price) : '-'}</td>
                     <td class="px-4 py-3 text-gray-500">${formatNumber(stock.volume)}</td>
                     <td class="px-4 py-3">
-                        <div class="flex items-center gap-2">
-                            ${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}
-                            <button class="px-2 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
-                                onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
-                                متابعة
-                            </button>
-                        </div>
+                        <button class="px-2 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700"
+                            onclick="event.stopPropagation(); addTickerToWatchlist('${stock.ticker}')">
+                            متابعة
+                        </button>
                     </td>
                 </tr>
             `).join('') || '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">لا توجد بيانات متاحة</td></tr>';
@@ -838,19 +872,23 @@ async function loadStocks(page = 1, options = {}) {
             }
         }
 
-        const halalOnly = document.getElementById('halalOnlyFilter')?.checked;
+        const query = document.getElementById('stockQuickSearch')?.value?.trim();
+        const searchField = document.getElementById('stockSearchField')?.value || 'all';
+        const stockSortField = document.getElementById('stockSortField')?.value || 'ticker';
+        const stockSortDir = document.getElementById('stockSortDir')?.value || 'asc';
         const sector = document.getElementById('sectorFilter')?.value;
         const indexFilter = document.getElementById('indexFilter')?.value;
 
         const response = await apiService.getStocks({
             page,
             page_size: state.pageSize,
-            halal_only: halalOnly,
+            query: query || undefined,
+            search_field: searchField,
             sector: sector || undefined,
             index: indexFilter || undefined,
         });
 
-        state.stocks = response.stocks || response.data || [];
+        state.stocks = sortItems(response.stocks || response.data || [], stockSortField, stockSortDir);
         state.page = page;
         state.totalStocks = response.total || state.stocks.length;
 
@@ -864,7 +902,6 @@ async function loadStocks(page = 1, options = {}) {
                     ${Math.abs(stock.price_change || 0).toFixed(2)}
                 </td>
                 <td class="px-4 py-3 text-gray-500">${stock.sector || '-'}</td>
-                <td class="px-4 py-3">${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}</td>
                 <td class="px-4 py-3">
                     <button class="text-blue-600 hover:text-blue-800 text-sm font-medium"
                         onclick="event.stopPropagation(); showStockDetail('${stock.ticker}')">
@@ -895,7 +932,7 @@ async function loadStocks(page = 1, options = {}) {
     } catch (error) {
         console.error('خطأ في تحميل الأسهم:', error);
         if (!silent) {
-            tableBody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-red-500">فشل تحميل الأسهم: ${error.message}</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-red-500">فشل تحميل الأسهم: ${error.message}</td></tr>`;
             pageLoading?.classList.add('hidden');
             pageContent?.classList.remove('hidden');
             loading?.classList.add('hidden');
@@ -917,22 +954,24 @@ async function performSearch() {
     try {
         loading?.classList.remove('hidden');
 
-        const halalOnly = document.getElementById('searchHalalOnly')?.checked;
         const sector = document.getElementById('searchSectorFilter')?.value;
         const minPrice = document.getElementById('minPrice')?.value;
         const maxPrice = document.getElementById('maxPrice')?.value;
 
         const response = await apiService.searchStocks(query, {
-            halal_only: halalOnly,
             sector: sector || undefined,
             min_price: minPrice || undefined,
             max_price: maxPrice || undefined,
         });
 
-        if (response.results && response.results.length > 0) {
+        const searchSortField = document.getElementById('searchSortField')?.value || 'ticker';
+        const searchSortDir = document.getElementById('searchSortDir')?.value || 'asc';
+        const sortedResults = sortItems(response.results || [], searchSortField, searchSortDir);
+
+        if (sortedResults && sortedResults.length > 0) {
             resultsContainer.innerHTML = `
                 <div class="mb-4 text-sm text-gray-500">
-                    تم العثور على ${response.total} نتيجة لـ "${query}"
+                    تم العثور على ${response.total} نتيجة لـ "${query}" (مع تطبيق الفرز)
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full">
@@ -942,18 +981,16 @@ async function performSearch() {
                                 <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">الاسم</th>
                                 <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">السعر</th>
                                 <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">القطاع</th>
-                                <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">الامتثال</th>
                                 <th class="px-4 py-3 text-xs font-semibold text-gray-500 uppercase">إجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${response.results.map(stock => `
+                            ${sortedResults.map(stock => `
                                 <tr class="hover:bg-gray-50 border-b border-gray-100 cursor-pointer" onclick="showStockDetail('${stock.ticker}')">
                                     <td class="px-4 py-3 font-medium text-blue-600">${stock.ticker}</td>
                                     <td class="px-4 py-3 text-gray-900">${stock.name || '-'}</td>
                                     <td class="px-4 py-3 font-medium">${stock.current_price ? formatCurrency(stock.current_price) : '-'}</td>
                                     <td class="px-4 py-3 text-gray-500">${stock.sector || '-'}</td>
-                                    <td class="px-4 py-3">${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}</td>
                                     <td class="px-4 py-3">
                                         <button class="text-blue-600 hover:text-blue-800 text-sm font-medium"
                                             onclick="event.stopPropagation(); showStockDetail('${stock.ticker}')">عرض</button>
@@ -1163,8 +1200,9 @@ async function showStockDetail(ticker) {
             </div>
 
             <div class="mb-6">
-                ${createBadge(getComplianceText(stock.compliance_status), stock.compliance_status?.toLowerCase())}
-                ${stock.compliance_note ? `<span class="mr-2 text-sm text-gray-500">${stock.compliance_note}</span>` : ''}
+                <span class="inline-flex items-center px-3 py-1 rounded-lg bg-slate-100 text-slate-700 text-sm">
+                    <i class="fas fa-info-circle ml-1"></i>بيانات EGX محدثة
+                </span>
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -1301,17 +1339,18 @@ async function loadWatchlistPage() {
         document.getElementById('watchlistTableContainer')?.classList.add('hidden');
 
         const watchlist = await loadWatchlist();
+        const sortedWatchlist = sortItems(watchlist || [], 'ticker', 'asc');
         
         document.getElementById('watchlistLoading')?.classList.add('hidden');
         
-        if (!watchlist || watchlist.length === 0) {
+        if (!sortedWatchlist || sortedWatchlist.length === 0) {
             document.getElementById('watchlistEmpty')?.classList.remove('hidden');
             return;
         }
 
         document.getElementById('watchlistTableContainer')?.classList.remove('hidden');
         const tbody = document.getElementById('watchlistTableBody');
-        tbody.innerHTML = watchlist.map(item => `
+        tbody.innerHTML = sortedWatchlist.map(item => `
             <tr class="border-b border-gray-100 hover:bg-gray-50">
                 <td class="px-6 py-4 font-medium text-gray-900">${item.ticker}</td>
                 <td class="px-6 py-4 text-gray-600">${item.stock_name || '-'}</td>
@@ -1362,6 +1401,7 @@ async function loadPortfolioPage() {
             loadAssets(),
             loadFinancialSummary()
         ]);
+        const sortedAssets = sortItems(assets || [], 'current_value', 'desc');
 
         // تحد�`ث �&�خص ا��&حفظة
         if (summary) {
@@ -1375,21 +1415,21 @@ async function loadPortfolioPage() {
             gainPercentEl.textContent = summary.total_gain_loss_percent ? summary.total_gain_loss_percent.toFixed(2) + '%' : '-';
             gainPercentEl.className = `text-xl font-bold ${summary.total_gain_loss_percent >= 0 ? 'text-green-600' : 'text-red-600'}`;
             
-            document.getElementById('portfolioAssetCount').textContent = assets?.length || 0;
+            document.getElementById('portfolioAssetCount').textContent = sortedAssets?.length || 0;
 
-            renderPortfolioRiskInsights(assets || [], summary);
+            renderPortfolioRiskInsights(sortedAssets || [], summary);
         }
 
         document.getElementById('assetsLoading')?.classList.add('hidden');
 
-        if (!assets || assets.length === 0) {
+        if (!sortedAssets || sortedAssets.length === 0) {
             document.getElementById('assetsEmpty')?.classList.remove('hidden');
             return;
         }
 
         document.getElementById('assetsTableContainer')?.classList.remove('hidden');
         const tbody = document.getElementById('assetsTableBody');
-        tbody.innerHTML = assets.map(asset => `
+        tbody.innerHTML = sortedAssets.map(asset => `
             <tr class="border-b border-gray-100 hover:bg-gray-50">
                 <td class="px-6 py-4">
                     <span class="px-2 py-1 text-xs rounded-full ${getAssetTypeClass(asset.asset_type)}">${getAssetTypeLabel(asset.asset_type)}</span>
@@ -1445,8 +1485,8 @@ function renderPortfolioRiskInsights(assets = [], summary = null) {
     const totalValue = getPortfolioSummaryValue(summary, 'total_value', 'total_assets_value') ||
         assets.reduce((sum, asset) => sum + (asset.current_value || 0), 0);
     const typeBreakdown = summary?.by_type || {};
-    const halalPercent = typeof summary?.halal_percent === 'number' ? summary.halal_percent : 100;
     const totalGainPercent = typeof summary?.total_gain_loss_percent === 'number' ? summary.total_gain_loss_percent : 0;
+    const profitableAssets = assets.filter((a) => Number(a.gain_loss || 0) > 0).length;
 
     const sortedByValue = [...assets].sort((a, b) => (b.current_value || 0) - (a.current_value || 0));
     const largest = sortedByValue[0];
@@ -1498,8 +1538,8 @@ function renderPortfolioRiskInsights(assets = [], summary = null) {
                 <p class="font-bold text-gray-900">${diversificationScore.toFixed(0)}/100</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-3">
-                <p class="text-xs text-gray-500">نسبة الأصول الحلال</p>
-                <p class="font-bold text-gray-900">${halalPercent.toFixed(1)}%</p>
+                <p class="text-xs text-gray-500">الأصول الرابحة</p>
+                <p class="font-bold text-gray-900">${profitableAssets}</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-3">
                 <p class="text-xs text-gray-500">عدد فئات الأصول</p>
@@ -1651,10 +1691,11 @@ async function loadIncomeExpensePage() {
             loadIncomeExpenses(),
             loadFinancialSummary().catch(() => null)
         ]);
+        const sortedTransactions = sortItems(transactions || [], 'transaction_date', 'desc');
         
         // حساب ا�إج�&ا��`ات
-        const totalIncome = transactions?.filter(t => t.transaction_type === 'income').reduce((sum, t) => sum + t.amount, 0) || 0;
-        const totalExpenses = transactions?.filter(t => t.transaction_type === 'expense').reduce((sum, t) => sum + t.amount, 0) || 0;
+        const totalIncome = sortedTransactions?.filter(t => t.transaction_type === 'income').reduce((sum, t) => sum + t.amount, 0) || 0;
+        const totalExpenses = sortedTransactions?.filter(t => t.transaction_type === 'expense').reduce((sum, t) => sum + t.amount, 0) || 0;
         const netCashFlow = totalIncome - totalExpenses;
 
         document.getElementById('totalIncome').textContent = formatCurrency(totalIncome);
@@ -1663,7 +1704,7 @@ async function loadIncomeExpensePage() {
         netFlowEl.textContent = formatCurrency(netCashFlow);
         netFlowEl.className = `text-xl font-bold ${netCashFlow >= 0 ? 'text-green-600' : 'text-red-600'}`;
 
-        const investmentSpent = transactions?.filter(t => t.transaction_type === 'expense' && t.category === 'investment').reduce((sum, t) => sum + t.amount, 0) || 0;
+        const investmentSpent = sortedTransactions?.filter(t => t.transaction_type === 'expense' && t.category === 'investment').reduce((sum, t) => sum + t.amount, 0) || 0;
         const currentPortfolioValue = getPortfolioSummaryValue(summary, 'total_assets_value', 'total_value');
         const unrealizedPnL = currentPortfolioValue - investmentSpent;
 
@@ -1680,14 +1721,14 @@ async function loadIncomeExpensePage() {
 
         document.getElementById('transactionsLoading')?.classList.add('hidden');
 
-        if (!transactions || transactions.length === 0) {
+        if (!sortedTransactions || sortedTransactions.length === 0) {
             document.getElementById('transactionsEmpty')?.classList.remove('hidden');
             return;
         }
 
         document.getElementById('transactionsTableContainer')?.classList.remove('hidden');
         const tbody = document.getElementById('transactionsTableBody');
-        tbody.innerHTML = transactions.map(t => `
+        tbody.innerHTML = sortedTransactions.map(t => `
             <tr class="border-b border-gray-100 hover:bg-gray-50">
                 <td class="px-6 py-4">
                     <span class="px-2 py-1 text-xs rounded-full ${t.transaction_type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
@@ -1736,17 +1777,18 @@ async function loadAlertsPage() {
         document.getElementById('alertsListContainer')?.classList.add('hidden');
 
         const alerts = await loadScheduledAdvices();
+        const sortedAlerts = sortItems(alerts || [], 'scheduled_time', 'asc');
 
         document.getElementById('alertsLoading')?.classList.add('hidden');
 
-        if (!alerts || alerts.length === 0) {
+        if (!sortedAlerts || sortedAlerts.length === 0) {
             document.getElementById('alertsEmpty')?.classList.remove('hidden');
             return;
         }
 
         document.getElementById('alertsListContainer')?.classList.remove('hidden');
         const container = document.getElementById('alertsListContainer');
-        container.innerHTML = alerts.map(alert => `
+        container.innerHTML = sortedAlerts.map(alert => `
             <div class="border border-gray-200 rounded-lg p-4 flex items-center justify-between">
                 <div class="flex items-center gap-4">
                     <div class="w-10 h-10 rounded-full ${alert.is_active ? 'bg-green-100' : 'bg-gray-100'} flex items-center justify-center">
@@ -2539,24 +2581,12 @@ document.getElementById('settingsForm')?.addEventListener('submit', async (e) =>
     }
 });
 
-function getComplianceText(status) {
-    const texts = {
-        'halal': 'حلال',
-        'haram': 'حرام',
-        'doubtful': 'مشكوك',
-        'controversial': 'مشكوك',
-        'unknown': 'غير معروف'
-    };
-    return texts[status?.toLowerCase()] || 'غير معروف';
-}
-
 function getRiskAssessmentText(key) {
     const texts = {
         'overall_risk': 'المخاطر الإجمالية',
         'volatility': 'التقلب',
         'concentration_risk': 'مخاطر التركز',
         'sector_diversification': 'تنويع القطاعات',
-        'shariah_compliance': 'الامتثال الشرعي',
         'liquidity_risk': 'مخاطر السيولة',
     };
     return texts[key] || key.replace(/_/g, ' ');

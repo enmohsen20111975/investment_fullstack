@@ -191,7 +191,7 @@ router.post('/assets', authenticateApiKey, requireUser, async (req, res) => {
         const {
             asset_type, asset_name, asset_ticker, stock_id,
             quantity, purchase_price, purchase_date,
-            target_price, stop_loss_price, currency, notes, is_halal
+            target_price, stop_loss_price, currency, notes
         } = req.body;
 
         if (!asset_type || !asset_name || quantity === undefined || purchase_price === undefined) {
@@ -217,8 +217,7 @@ router.post('/assets', authenticateApiKey, requireUser, async (req, res) => {
             target_price,
             stop_loss_price,
             currency: currency || 'EGP',
-            notes,
-            is_halal: is_halal !== false
+            notes
         });
 
         res.status(201).json(asset);
@@ -405,7 +404,6 @@ router.get('/portfolio-impact', authenticateApiKey, requireUser, async (req, res
                     day_impact_percent: Number(dayImpactPercent.toFixed(2)),
                     total_gain_loss_value: Number(totalGainLossValue.toFixed(2)),
                     total_gain_loss_percent: Number(totalGainLossPercent.toFixed(2)),
-                    compliance_status: stock.compliance_status || 'unknown',
                     sector: stock.sector || null,
                     weight_percent: 0,
                     alerts: [],
@@ -524,9 +522,7 @@ router.get('/financial-summary', authenticateApiKey, requireUser, async (req, re
             total_cost: 0,
             total_gain_loss: 0,
             by_type: {},
-            by_currency: {},
-            halal_value: 0,
-            non_halal_value: 0
+            by_currency: {}
         };
 
         for (const asset of assets) {
@@ -548,22 +544,12 @@ router.get('/financial-summary', authenticateApiKey, requireUser, async (req, re
                 summary.by_currency[asset.currency] = 0;
             }
             summary.by_currency[asset.currency] += value;
-
-            // Halal tracking
-            if (asset.is_halal) {
-                summary.halal_value += value;
-            } else {
-                summary.non_halal_value += value;
-            }
         }
 
         summary.total_gain_loss = summary.total_value - summary.total_cost;
         summary.total_gain_loss_percent = summary.total_cost > 0
             ? (summary.total_gain_loss / summary.total_cost) * 100
             : 0;
-        summary.halal_percent = summary.total_value > 0
-            ? (summary.halal_value / summary.total_value) * 100
-            : 100;
 
         res.json(summary);
     } catch (error) {
@@ -816,8 +802,7 @@ router.get('/shared-portfolio/:shareCode', async (req, res) => {
                 const data = {
                     asset_type: asset.asset_type,
                     asset_name: asset.asset_name,
-                    asset_ticker: asset.asset_ticker,
-                    is_halal: asset.is_halal
+                    asset_ticker: asset.asset_ticker
                 };
 
                 if (shared.show_values) {

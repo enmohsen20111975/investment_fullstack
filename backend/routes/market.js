@@ -27,9 +27,69 @@ function mapIndexResponse(indexModel) {
         previous_close: toNumber(idx.previous_close, 0),
         change: toNumber(idx.change, 0),
         change_percent: toNumber(idx.change_percent, 0),
-        is_shariah: false,
         last_updated: idx.last_update
     };
+}
+
+const clamp = (num, min, max) => Math.max(min, Math.min(max, num));
+
+function calculateStockStatus(stock) {
+    const priceChange = toNumber(stock.getPriceChange ? stock.getPriceChange() : 0, 0);
+    const volume = toNumber(stock.volume, 0);
+    const valueTraded = toNumber(stock.value_traded, 0);
+    const peRatio = toNumber(stock.pe_ratio, 0);
+    const dividendYield = toNumber(stock.dividend_yield, 0);
+
+    const momentumScore = clamp(50 + (priceChange * 8), 0, 100);
+    const liquidityScore = clamp((Math.log10(volume + 1) * 20), 0, 100);
+    const valuationScore = peRatio > 0 ? clamp(100 - (peRatio * 2), 0, 100) : 50;
+    const incomeScore = clamp(dividendYield * 12, 0, 100);
+    const tradedValueScore = clamp(Math.log10(valueTraded + 1) * 18, 0, 100);
+
+    const totalScore = clamp(
+        (momentumScore * 0.35) +
+        (liquidityScore * 0.20) +
+        (valuationScore * 0.20) +
+        (incomeScore * 0.10) +
+        (tradedValueScore * 0.15),
+        0,
+        100
+    );
+
+    const status = totalScore >= 70 ? 'strong' : (totalScore >= 55 ? 'positive' : (totalScore >= 40 ? 'neutral' : 'weak'));
+
+    return {
+        ticker: stock.ticker,
+        name: stock.name,
+        name_ar: stock.name_ar,
+        sector: stock.sector,
+        current_price: toNumber(stock.current_price, 0),
+        price_change: priceChange,
+        volume,
+        value_traded: valueTraded,
+        score: Number(totalScore.toFixed(2)),
+        status,
+        components: {
+            momentum: Number(momentumScore.toFixed(2)),
+            liquidity: Number(liquidityScore.toFixed(2)),
+            valuation: Number(valuationScore.toFixed(2)),
+            income: Number(incomeScore.toFixed(2)),
+            traded_value: Number(tradedValueScore.toFixed(2))
+        }
+    };
+}
+
+function buildMarketAiPrompt(payload) {
+    return [
+        'You are an institutional EGX market analyst.',
+        'Use ONLY the provided calculations and stock statuses. Do not invent numbers.',
+        'Return JSON with keys: market_outlook, risk_level, allocation_strategy, top_opportunities, top_risks, action_plan_24h.',
+        `Market snapshot: sentiment=${payload.market_sentiment}, score=${payload.market_score}, breadth=${payload.market_breadth}%`,
+        `Counts: gainers=${payload.gainers}, losers=${payload.losers}, unchanged=${payload.unchanged}`,
+        `Top sectors: ${payload.top_sectors.map(s => `${s.name}:${s.avg_change_percent}%`).join(', ')}`,
+        'Stock statuses (top by score):',
+        JSON.stringify(payload.stock_statuses.slice(0, 20), null, 2)
+    ].join('\n');
 }
 
 /**
@@ -340,26 +400,28 @@ router.get('/refresh-check', optionalAuth, async (req, res) => {
  */
 router.get('/recommendations/trusted-sources', authenticateApiKey, async (req, res) => {
     try {
-        // Get stocks with positive indicators
+        // Get stocks with positive indicators based on computed score
         const stocks = await Stock.findAll({
             where: {
                 is_active: true,
-                [Op.or]: [
-                    { is_halal: true },
-                    { compliance_status: 'halal' }
-                ]
+                is_egx: true
             },
-            limit: 10
+            limit: 120
         });
 
-        const recommendations = stocks.map(stock => ({
+        const ranked = stocks
+            .map(calculateStockStatus)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 10);
+
+        const recommendations = ranked.map(stock => ({
             ticker: stock.ticker,
             name: stock.name,
+            name_ar: stock.name_ar,
             current_price: stock.current_price,
-            pe_ratio: stock.pe_ratio,
-            dividend_yield: stock.dividend_yield,
-            compliance_status: stock.compliance_status,
-            recommendation: 'hold',
+            score: stock.score,
+            status: stock.status,
+            recommendation: stock.score >= 70 ? 'buy_on_strength' : (stock.score >= 55 ? 'accumulate' : 'watch'),
             source: 'internal_analysis'
         }));
 
@@ -385,37 +447,71 @@ router.get('/recommendations/ai-insights', authenticateApiKey, async (req, res) 
             where: { is_active: true, is_egx: true }
         });
 
-        // Generate basic insights
-        const insights = {
-            market_sentiment: 'neutral',
-            top_sectors: [],
-            recommendations: [],
-            risk_assessment: 'medium',
-            generated_at: new Date().toISOString()
-        };
-
-        // Calculate market sentiment
+        // Calculate market state
         const gainers = stocks.filter(s => s.getPriceChange && s.getPriceChange() > 0).length;
         const losers = stocks.filter(s => s.getPriceChange && s.getPriceChange() < 0).length;
+        const unchanged = Math.max(0, stocks.length - gainers - losers);
+        const breadth = stocks.length ? (gainers / stocks.length) * 100 : 0;
+        const avgChange = stocks.length
+            ? stocks.reduce((sum, s) => sum + toNumber(s.getPriceChange ? s.getPriceChange() : 0, 0), 0) / stocks.length
+            : 0;
+        const volatility = stocks.length
+            ? stocks.reduce((sum, s) => sum + Math.abs(toNumber(s.getPriceChange ? s.getPriceChange() : 0, 0)), 0) / stocks.length
+            : 0;
 
+        let marketSentiment = 'neutral';
         if (gainers > losers * 1.5) {
-            insights.market_sentiment = 'bullish';
+            marketSentiment = 'bullish';
         } else if (losers > gainers * 1.5) {
-            insights.market_sentiment = 'bearish';
+            marketSentiment = 'bearish';
         }
+
+        const marketScore = clamp((breadth * 0.45) + ((avgChange + 5) * 10 * 0.30) + ((100 - (volatility * 10)) * 0.25), 0, 100);
+        const riskAssessment = volatility >= 2.2 ? 'high' : (volatility >= 1.2 ? 'medium' : 'low');
 
         // Get sector breakdown
         const sectors = {};
         stocks.forEach(s => {
             if (s.sector) {
-                sectors[s.sector] = (sectors[s.sector] || 0) + 1;
+                if (!sectors[s.sector]) sectors[s.sector] = { count: 0, total_change: 0 };
+                sectors[s.sector].count += 1;
+                sectors[s.sector].total_change += toNumber(s.getPriceChange ? s.getPriceChange() : 0, 0);
             }
         });
 
-        insights.top_sectors = Object.entries(sectors)
-            .sort((a, b) => b[1] - a[1])
+        const topSectors = Object.entries(sectors)
+            .map(([name, data]) => ({
+                name,
+                count: data.count,
+                avg_change_percent: Number((data.total_change / Math.max(data.count, 1)).toFixed(2))
+            }))
+            .sort((a, b) => b.count - a.count)
             .slice(0, 5)
-            .map(([name, count]) => ({ name, count }));
+            .map((item) => item);
+
+        const stockStatuses = stocks
+            .map(calculateStockStatus)
+            .sort((a, b) => b.score - a.score);
+
+        const decision = marketScore >= 65 ? 'accumulate_selectively' : (marketScore >= 45 ? 'hold_and_rebalance' : 'reduce_risk');
+
+        const insights = {
+            market_sentiment: marketSentiment,
+            market_score: Number(marketScore.toFixed(2)),
+            market_breadth: Number(breadth.toFixed(2)),
+            avg_change_percent: Number(avgChange.toFixed(3)),
+            volatility_index: Number(volatility.toFixed(3)),
+            gainers,
+            losers,
+            unchanged,
+            top_sectors: topSectors,
+            stock_statuses: stockStatuses.slice(0, 50),
+            decision,
+            risk_assessment: riskAssessment,
+            generated_at: new Date().toISOString()
+        };
+
+        insights.ai_prompt = buildMarketAiPrompt(insights);
 
         res.json(insights);
     } catch (error) {

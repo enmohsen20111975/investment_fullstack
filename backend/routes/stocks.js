@@ -31,9 +31,41 @@ const buildStockResponse = (stock) => {
  */
 router.get('/', optionalAuth, async (req, res) => {
     try {
-        const { sector, index, page = 1, page_size = 50 } = req.query;
+        const { query, search_field = 'all', sector, index, page = 1, page_size = 50 } = req.query;
 
         const whereClause = { is_active: true };
+
+        if (query) {
+            const q = `%${query}%`;
+            switch ((search_field || 'all').toLowerCase()) {
+                case 'symbol':
+                    whereClause.ticker = { [Op.iLike]: q };
+                    break;
+                case 'name':
+                    whereClause[Op.or] = [
+                        { name: { [Op.iLike]: q } },
+                        { name_ar: { [Op.iLike]: q } }
+                    ];
+                    break;
+                case 'sector':
+                    whereClause.sector = { [Op.iLike]: q };
+                    break;
+                case 'index': {
+                    const idx = query.toLowerCase();
+                    if (idx.includes('30')) whereClause.egx30_member = true;
+                    else if (idx.includes('70')) whereClause.egx70_member = true;
+                    else if (idx.includes('100')) whereClause.egx100_member = true;
+                    break;
+                }
+                default:
+                    whereClause[Op.or] = [
+                        { ticker: { [Op.iLike]: q } },
+                        { name: { [Op.iLike]: q } },
+                        { name_ar: { [Op.iLike]: q } },
+                        { sector: { [Op.iLike]: q } }
+                    ];
+            }
+        }
 
         if (sector) {
             whereClause.sector = sector;
@@ -212,13 +244,6 @@ router.get('/search/:query', optionalAuth, async (req, res) => {
                 { name_ar: { [Op.iLike]: `%${query}%` } }
             ]
         };
-
-        if (halal_only === 'true') {
-            whereClause[Op.or] = [
-                { is_halal: true },
-                { compliance_status: 'halal' }
-            ];
-        }
 
         if (sector) {
             whereClause.sector = sector;

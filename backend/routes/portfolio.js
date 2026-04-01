@@ -9,7 +9,6 @@ const { Op } = require('sequelize');
 const logger = require('../logger');
 const { Stock, Portfolio, PortfolioHolding, User } = require('../models');
 const { authenticateApiKey, requireUser, optionalAuth } = require('../middleware/auth');
-const { HALAL_STOCKS, HARAM_STOCKS, COMPLIANCE_NOTES } = require('../config');
 
 /**
  * @route GET /api/portfolio/recommend
@@ -17,7 +16,7 @@ const { HALAL_STOCKS, HARAM_STOCKS, COMPLIANCE_NOTES } = require('../config');
  */
 router.get('/recommend', authenticateApiKey, async (req, res) => {
     try {
-        const { capital, risk = 'medium', halal_only, max_stocks, sectors } = req.query;
+        const { capital, risk = 'medium', max_stocks, sectors } = req.query;
 
         if (!capital || parseFloat(capital) <= 0) {
             return res.status(400).json({
@@ -28,17 +27,9 @@ router.get('/recommend', authenticateApiKey, async (req, res) => {
         const capitalAmount = parseFloat(capital);
         const riskLevel = risk.toLowerCase();
         const maxStocksCount = max_stocks ? parseInt(max_stocks) : 10;
-        const halalOnly = halal_only === 'true';
 
         // Build where clause
         const whereClause = { is_active: true };
-
-        if (halalOnly) {
-            whereClause[Op.or] = [
-                { is_halal: true },
-                { compliance_status: 'halal' }
-            ];
-        }
 
         if (sectors) {
             whereClause.sector = { [Op.in]: sectors.split(',') };
@@ -65,11 +56,6 @@ router.get('/recommend', authenticateApiKey, async (req, res) => {
                 if (stock.getPriceChange && stock.getPriceChange() > 5) score += 15;
             }
 
-            // Adjust for halal
-            if (halalOnly && (stock.is_halal || stock.compliance_status === 'halal')) {
-                score += 20;
-            }
-
             return { stock, score };
         });
 
@@ -91,7 +77,6 @@ router.get('/recommend', authenticateApiKey, async (req, res) => {
                 allocation_percent: Math.round((score / totalScore) * 100 * 100) / 100,
                 recommended_shares: shares,
                 score,
-                compliance_status: stock.compliance_status,
                 sector: stock.sector
             };
         });
@@ -99,7 +84,6 @@ router.get('/recommend', authenticateApiKey, async (req, res) => {
         res.json({
             capital: capitalAmount,
             risk_level: riskLevel,
-            halal_only: halalOnly,
             recommendations,
             total_stocks: recommendations.length,
             generated_at: new Date().toISOString()
@@ -119,7 +103,6 @@ router.post('/recommend/advanced', authenticateApiKey, async (req, res) => {
         const {
             capital,
             risk = 'medium',
-            halal_only = false,
             max_stocks = 10,
             sectors = [],
             exclude_tickers = [],
@@ -136,13 +119,6 @@ router.post('/recommend/advanced', authenticateApiKey, async (req, res) => {
 
         // Build where clause
         const whereClause = { is_active: true };
-
-        if (halal_only) {
-            whereClause[Op.or] = [
-                { is_halal: true },
-                { compliance_status: 'halal' }
-            ];
-        }
 
         if (sectors.length > 0) {
             whereClause.sector = { [Op.in]: sectors };
@@ -214,7 +190,6 @@ router.post('/recommend/advanced', authenticateApiKey, async (req, res) => {
                 allocation_percent: Math.round((score / totalScore) * 100 * 100) / 100,
                 recommended_shares: shares,
                 score,
-                compliance_status: stock.compliance_status,
                 sector: stock.sector,
                 pe_ratio: stock.pe_ratio,
                 dividend_yield: stock.dividend_yield
@@ -228,7 +203,6 @@ router.post('/recommend/advanced', authenticateApiKey, async (req, res) => {
         res.json({
             capital,
             risk_level: risk,
-            halal_only,
             investment_horizon,
             recommendations,
             portfolio_metrics: {
@@ -241,74 +215,6 @@ router.post('/recommend/advanced', authenticateApiKey, async (req, res) => {
     } catch (error) {
         logger.error('Get advanced recommendations error:', error);
         res.status(500).json({ detail: 'Failed to get recommendations' });
-    }
-});
-
-/**
- * @route GET /api/portfolio/halal-stocks
- * @desc Get halal stocks list
- */
-router.get('/halal-stocks', optionalAuth, async (req, res) => {
-    try {
-        const stocks = await Stock.findAll({
-            where: {
-                is_active: true,
-                [Op.or]: [
-                    { is_halal: true },
-                    { compliance_status: 'halal' }
-                ]
-            },
-            order: [['ticker', 'ASC']]
-        });
-
-        res.json({
-            stocks: stocks.map(s => ({
-                ticker: s.ticker,
-                name: s.name,
-                current_price: s.current_price,
-                sector: s.sector,
-                compliance_status: s.compliance_status
-            })),
-            total: stocks.length,
-            note: COMPLIANCE_NOTES.halal
-        });
-    } catch (error) {
-        logger.error('Get halal stocks error:', error);
-        res.status(500).json({ detail: 'Failed to get halal stocks' });
-    }
-});
-
-/**
- * @route GET /api/portfolio/haram-stocks
- * @desc Get haram stocks list
- */
-router.get('/haram-stocks', optionalAuth, async (req, res) => {
-    try {
-        const stocks = await Stock.findAll({
-            where: {
-                is_active: true,
-                [Op.or]: [
-                    { is_halal: false },
-                    { compliance_status: 'haram' }
-                ]
-            },
-            order: [['ticker', 'ASC']]
-        });
-
-        res.json({
-            stocks: stocks.map(s => ({
-                ticker: s.ticker,
-                name: s.name,
-                current_price: s.current_price,
-                sector: s.sector,
-                compliance_status: s.compliance_status
-            })),
-            total: stocks.length,
-            note: COMPLIANCE_NOTES.haram
-        });
-    } catch (error) {
-        logger.error('Get haram stocks error:', error);
-        res.status(500).json({ detail: 'Failed to get haram stocks' });
     }
 });
 

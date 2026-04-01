@@ -152,6 +152,8 @@ class ApiService {
      */
     async getStocks(params = {}) {
         const query = new URLSearchParams();
+        if (params.query) query.append('query', params.query);
+        if (params.search_field) query.append('search_field', params.search_field);
         if (params.sector) query.append('sector', params.sector);
         if (params.index) query.append('index', params.index);
         if (params.page) query.append('page', params.page);
