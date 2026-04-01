@@ -2062,6 +2062,68 @@
                         </div>
                     </div>
 
+                    <!-- تقرير شهري -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer" onclick="toggleMonthlyReport()">
+                            <h3 class="font-semibold text-gray-900">
+                                <i class="fas fa-chart-line text-blue-500 ml-2"></i>التقرير الشهري
+                            </h3>
+                            <i class="fas fa-chevron-down text-gray-400 transition-transform" id="monthlyReportChevron"></i>
+                        </div>
+                        <div id="monthlyReportForm" class="hidden p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">الشهر</label>
+                                    <select id="reportMonth" onchange="generateMonthlyReport()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        <option value="1">يناير</option>
+                                        <option value="2">فبراير</option>
+                                        <option value="3">مارس</option>
+                                        <option value="4">أبريل</option>
+                                        <option value="5">مايو</option>
+                                        <option value="6">يونيو</option>
+                                        <option value="7">يوليو</option>
+                                        <option value="8">أغسطس</option>
+                                        <option value="9">سبتمبر</option>
+                                        <option value="10">أكتوبر</option>
+                                        <option value="11">نوفمبر</option>
+                                        <option value="12">ديسمبر</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">السنة</label>
+                                    <input type="number" id="reportYear" min="2020" onchange="generateMonthlyReport()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                </div>
+                                <div class="flex items-end">
+                                    <button type="button" onclick="generateMonthlyReport()" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
+                                        تحديث التقرير
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="monthlyReportContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                    <p class="text-xs text-green-700 mb-1">الدخل الشهري</p>
+                                    <p class="font-bold text-lg text-gray-900" id="monthlyIncome">-</p>
+                                </div>
+                                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                                    <p class="text-xs text-red-700 mb-1">المصروفات الشهرية</p>
+                                    <p class="font-bold text-lg text-gray-900" id="monthlyExpenses">-</p>
+                                </div>
+                                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                    <p class="text-xs text-purple-700 mb-1">الاستثمار الشهري</p>
+                                    <p class="font-bold text-lg text-gray-900" id="monthlyInvestment">-</p>
+                                </div>
+                                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                    <p class="text-xs text-amber-700 mb-1">أداء المحفظة</p>
+                                    <p class="font-bold text-lg" id="monthlyPortfolioPerf">-</p>
+                                </div>
+                            </div>
+                            <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p class="text-xs text-blue-700 font-semibold mb-2">ملخص الشهر:</p>
+                                <p class="text-sm text-gray-700" id="monthlySummaryText">حدد شهراً وسنة لعرض الملخص</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- إضافة معاملة -->
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
                         <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between cursor-pointer" onclick="toggleAddTransactionForm()">
@@ -2453,6 +2515,106 @@
             }
         });
     </script>
+
+    <!-- Sell Asset Modal -->
+    <div id="sellAssetModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6" dir="rtl">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-lg font-bold text-gray-800">بيع الأصل</h2>
+                <button onclick="closeSellAssetModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form onsubmit="confirmSellAsset(); return false;" class="space-y-4">
+                <input type="hidden" id="sellAssetId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">اسم الأصل</label>
+                    <input type="text" id="sellAssetName" readonly class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-gray-600">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الكمية المتاحة</label>
+                        <input type="number" id="sellAssetAvailableQty" readonly class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-gray-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الكمية المراد بيعها</label>
+                        <input type="number" id="sellAssetQuantity" required step="0.0001" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">سعر البيع (جنيه للوحدة)</label>
+                    <input type="number" id="sellAssetPrice" required step="0.01" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">تاريخ البيع</label>
+                    <input type="date" id="sellAssetDate" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p class="text-xs text-blue-700 mb-2">ملخص العملية:</p>
+                    <p class="text-sm font-semibold text-gray-800">المبلغ الإجمالي: <span id="sellAssetTotal">-</span></p>
+                    <p class="text-xs text-gray-600 mt-1">سيتم تسجيل هذا كـ دخل استثماري في الدخل/المصروفات</p>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                        تأكيد البيع
+                    </button>
+                    <button type="button" onclick="closeSellAssetModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sell Asset Modal -->
+    <div id="sellAssetModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6" dir="rtl">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-lg font-bold text-gray-800">بيع الأصل</h2>
+                <button onclick="closeSellAssetModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form onsubmit="confirmSellAsset(); return false;" class="space-y-4">
+                <input type="hidden" id="sellAssetId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">اسم الأصل</label>
+                    <input type="text" id="sellAssetName" readonly class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-gray-600">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الكمية المتاحة</label>
+                        <input type="number" id="sellAssetAvailableQty" readonly class="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-gray-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">الكمية المراد بيعها</label>
+                        <input type="number" id="sellAssetQuantity" required step="0.0001" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">سعر البيع (جنيه للوحدة)</label>
+                    <input type="number" id="sellAssetPrice" required step="0.01" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">تاريخ البيع</label>
+                    <input type="date" id="sellAssetDate" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                </div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p class="text-xs text-blue-700 mb-2">ملخص العملية:</p>
+                    <p class="text-sm font-semibold text-gray-800">المبلغ الإجمالي: <span id="sellAssetTotal">-</span></p>
+                    <p class="text-xs text-gray-600 mt-1">سيتم تسجيل هذا كـ دخل استثماري في الدخل/المصروفات</p>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                        تأكيد البيع
+                    </button>
+                    <button type="button" onclick="closeSellAssetModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg transition">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Edit Transaction Modal -->
     <div id="editTransactionModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">

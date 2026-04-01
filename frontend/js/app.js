@@ -1402,11 +1402,14 @@ async function loadPortfolioPage() {
                 <td class="px-6 py-4 ${asset.gain_loss >= 0 ? 'text-green-600' : 'text-red-600'}">
                     ${formatCurrency(asset.gain_loss)} (${asset.gain_loss_percent ? asset.gain_loss_percent.toFixed(2) : 0}%)
                 </td>
-                <td class="px-6 py-4">
-                    <button onclick="editAsset(${asset.id})" class="text-blue-500 hover:text-blue-700 ml-2">
+                <td class="px-6 py-4 flex items-center gap-2">
+                    <button onclick="editAsset(${asset.id})" class="text-blue-500 hover:text-blue-700" title="تعديل">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button onclick="deleteAssetConfirm(${asset.id})" class="text-red-500 hover:text-red-700">
+                    <button onclick="openSellAssetModal(${asset.id}, '${encodeURIComponent(JSON.stringify(asset))}');" class="text-emerald-600 hover:text-emerald-700" title="بيع الأصل">
+                        <i class="fas fa-cash-register"></i>
+                    </button>
+                    <button onclick="deleteAssetConfirm(${asset.id})" class="text-red-500 hover:text-red-700" title="حذف">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
@@ -2265,7 +2268,93 @@ window.removeWatchlistItem = async function(itemId) {
     }
 };
 
-// حذف ا�أص���
+// بيع الأصل - فتح النافذة
+window.openSellAssetModal = function(assetId, encodedAsset) {
+    try {
+        const asset = JSON.parse(decodeURIComponent(encodedAsset));
+        document.getElementById('sellAssetId').value = assetId;
+        document.getElementById('sellAssetName').value = asset.asset_name;
+        document.getElementById('sellAssetAvailableQty').value = asset.quantity;
+        document.getElementById('sellAssetQuantity').value = '';
+        document.getElementById('sellAssetPrice').value = asset.current_price ? asset.current_price.toFixed(2) : '';
+        document.getElementById('sellAssetDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('sellAssetTotal').textContent = '-';
+        document.getElementById('sellAssetModal').classList.remove('hidden');
+    } catch (error) {
+        console.error('خطأ في فتح نافذة البيع:', error);
+    }
+};
+
+// إغلاق نافذة البيع
+window.closeSellAssetModal = function() {
+    document.getElementById('sellAssetModal').classList.add('hidden');
+};
+
+// حساب إجمالي البيع والتحديث الحي
+document.getElementById('sellAssetQuantity')?.addEventListener('input', function() {
+    const qty = parseFloat(this.value) || 0;
+    const price = parseFloat(document.getElementById('sellAssetPrice').value) || 0;
+    const total = qty * price;
+    document.getElementById('sellAssetTotal').textContent = total > 0 ? formatCurrency(total) : '-';
+});
+
+document.getElementById('sellAssetPrice')?.addEventListener('input', function() {
+    const qty = parseFloat(document.getElementById('sellAssetQuantity').value) || 0;
+    const price = parseFloat(this.value) || 0;
+    const total = qty * price;
+    document.getElementById('sellAssetTotal').textContent = total > 0 ? formatCurrency(total) : '-';
+});
+
+// تأكيد البيع وتسجيل الدخل
+window.confirmSellAsset = async function() {
+    const assetId = document.getElementById('sellAssetId').value;
+    const quantity = parseFloat(document.getElementById('sellAssetQuantity').value);
+    const price = parseFloat(document.getElementById('sellAssetPrice').value);
+    const date = document.getElementById('sellAssetDate').value;
+    const assetName = document.getElementById('sellAssetName').value;
+    const availableQty = parseFloat(document.getElementById('sellAssetAvailableQty').value);
+
+    if (!quantity || !price || !date) {
+        showNotification('يرجى ملء جميع الحقول المطلوبة', 'warning');
+        return;
+    }
+
+    if (quantity > availableQty) {
+        showNotification(`الكمية المطلوبة تتجاوز المتاح (${availableQty})`, 'warning');
+        return;
+    }
+
+    try {
+        const totalSaleAmount = quantity * price;
+        
+        // تسجيل دخل استثماري
+        const incomeTransaction = {
+            transaction_type: 'income',
+            category: 'trading_profit',
+            amount: totalSaleAmount,
+            transaction_date: date,
+            description: `ربط تلقائي: بيع أصل (${assetName}) - ${quantity} وحدة بـ ${formatCurrency(price)} للوحدة`
+        };
+
+        await createIncomeExpense(incomeTransaction);
+
+        // تحديث الأصل (تقليل الكمية)
+        const updateData = {
+            quantity: availableQty - quantity
+        };
+        await updateAsset(assetId, updateData);
+
+        showNotification('تم تسجيل بيع الأصل بنجاح', 'success');
+        closeSellAssetModal();
+        loadPortfolioPage();
+        loadIncomeExpensePage();
+    } catch (error) {
+        console.error('خطأ في تسجيل بيع الأصل:', error);
+        showNotification(error.message || 'فشل تسجيل بيع الأصل', 'error');
+    }
+};
+
+// حذف الأصول
 window.deleteAssetConfirm = async function(assetId) {
     if (confirm('هل أنت متأكد من حذف هذا الأصل؟')) {
         try {
@@ -2274,6 +2363,82 @@ window.deleteAssetConfirm = async function(assetId) {
         } catch (error) {
             console.error('خطأ في حذف الأصل:', error);
         }
+    }
+};
+
+// التقرير الشهري - إظهار/إخفاء
+window.toggleMonthlyReport = function() {
+    const form = document.getElementById('monthlyReportForm');
+    const chevron = document.getElementById('monthlyReportChevron');
+    form?.classList.toggle('hidden');
+    chevron?.classList.toggle('rotate-180');
+    
+    if (!form?.classList.contains('hidden')) {
+        const today = new Date();
+        document.getElementById('reportMonth').value = today.getMonth() + 1;
+        document.getElementById('reportYear').value = today.getFullYear();
+        generateMonthlyReport();
+    }
+};
+
+// التقرير الشهري - توليد البيانات
+window.generateMonthlyReport = async function() {
+    try {
+        const month = parseInt(document.getElementById('reportMonth').value);
+        const year = parseInt(document.getElementById('reportYear').value);
+        
+        if (!month || !year) return;
+
+        // جلب جميع البيانات
+        const [incomeExpenses, portfolio] = await Promise.all([
+            loadIncomeExpenses().catch(() => []),
+            loadAssets().catch(() => [])
+        ]);
+
+        // تصفية البيانات حسب الشهر والسنة
+        const monthTransactions = (incomeExpenses || []).filter(t => {
+            const txDate = new Date(t.transaction_date);
+            return txDate.getMonth() + 1 === month && txDate.getFullYear() === year;
+        });
+
+        // حساب النقاط
+        const monthlyIncome = monthTransactions
+            .filter(t => t.transaction_type === 'income' && t.category !== 'trading_profit' && t.category !== 'dividend')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+        const monthlyExpenses = monthTransactions
+            .filter(t => t.transaction_type === 'expense' && t.category !== 'investment')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+        const monthlyInvestment = monthTransactions
+            .filter(t => t.transaction_type === 'expense' && t.category === 'investment')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+        const monthlyTradingProfit = monthTransactions
+            .filter(t => (t.category === 'trading_profit' || t.category === 'dividend') && t.transaction_type === 'income')
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+        // عرض النتائج
+        document.getElementById('monthlyIncome').textContent = formatCurrency(monthlyIncome);
+        document.getElementById('monthlyExpenses').textContent = formatCurrency(monthlyExpenses);
+        document.getElementById('monthlyInvestment').textContent = formatCurrency(monthlyInvestment);
+        
+        const perfEl = document.getElementById('monthlyPortfolioPerf');
+        perfEl.textContent = formatCurrency(monthlyTradingProfit);
+        perfEl.className = `font-bold text-lg ${monthlyTradingProfit >= 0 ? 'text-green-700' : 'text-red-700'}`;
+
+        // ملخص نصي
+        const netCashFlow = monthlyIncome - monthlyExpenses - monthlyInvestment;
+        const summary = `
+            الدخل: ${formatCurrency(monthlyIncome)} | المصروفات: ${formatCurrency(monthlyExpenses)} | 
+            الاستثمار: ${formatCurrency(monthlyInvestment)} | الأداء الاستثماري: ${formatCurrency(monthlyTradingProfit)} | 
+            صافي التدفق النقدي: ${formatCurrency(netCashFlow)}
+        `;
+        document.getElementById('monthlySummaryText').textContent = summary.trim();
+
+    } catch (error) {
+        console.error('خطأ في توليد التقرير الشهري:', error);
+        showNotification('فشل توليد التقرير الشهري', 'error');
     }
 };
 
